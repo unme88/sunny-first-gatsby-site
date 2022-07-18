@@ -3,4 +3,303 @@ title: "Another Post"
 date: "2021-07-24"
 ---
 
-Here's another post! It's even better than the first one!
+---
+description: '이 페이지에서는 BApp에서 Klip을 활용하기 위한 App2App Android SDK를 소개합니다.'
+---
+
+# 요구 사항
+
+* API 16: Android 4.1(Jelly Bean) 이상
+* Java 8 이상
+* Android Studio 3.0.0 이상
+* Android Permission : Internet Permission
+
+# 환경 설정
+
+Klip Android SDK는 별도의 가입 절차가 필요없고 기본적으로 HTTP 통신이 가능한 어느 환경에서도 동작 가능합니다. 다만, 카카오톡 더보기탭의 Klip을 실행하여 Klip 사용자의 승인을 받아야하기 때문에 기본적으로 모바일 카카오톡이 설치된 환경에서 호출해야 합니다.
+
+Klip Android SDK Sample 앱의 실행 가이드는 프로젝트에 포함되어 있는 `README.md`에 소개되어 있습니다.
+
+## 1. Klip SDK 다운로드
+[다운로드](a2a-sdk-download.md) 페이지에서 Klip Android SDK를 다운받습니다.
+
+## 2. Klip SDK 라이브러리 추가
+### 방법 1. Klip SDK 빌드 후 개발 프로젝트에 추가
+1. 다운받은 Klip SDK 프로잭트의 위치에서 **Terminal**을 실행
+2. `./gradlew :sdk:build` 명령을 실행하여 Klip SDK 프로젝트를 빌드 (빌드가 완료되면 <Klip SDK 프로젝트>/sdk/build/outputs/aar/위치에 결과물인 AAR 파일이 생성됨)
+3. 개발 프로젝트에 **libs** 디렉토리를 생성
+4. 빌드된 AAR 파일을 개발 프로젝트의 **libs** 디렉토리로 복사
+5. 개발 프로젝트의 `build.gradle`에 디렉토리 참조 및 디펜던시 설정을 추가
+
+```gradle
+repositories {
+  flatDir {
+    dirs 'libs'
+  }
+}
+dependencies {
+  // Klip SDK  
+  implementation 'com.klipwallet.app2app:klip-a2a-sdk-android_release_v2.0.0:2.0.0@aar'
+}
+```
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+<br />
+
+### 방법 2. Klip SDK 소스코드를 Import하여 개발 프로젝트에 추가
+1. 개발 중인 프로젝트를 **Android Studio**로 실행
+2. **Android Studio > File > New > Import Module**을 클릭
+3. **Source Directory**에 다운받은 Klip SDK 프로젝트의 **sdk** 디렉토리를 선택, 클릭한 후 **Next**를 클릭
+4. Klip SDK 프로젝트의 `gradle.properties` 내용들을 개발 프로젝트로 복사
+5. 개발 프로젝트의 `build.gradle`에 디펜던시 설정을 추가
+
+```gradle
+dependencies {
+  // Klip SDK  
+  implementation project(path: ':sdk')
+}
+```
+
+Klip SDK 소스가 개발 프로젝트에 복사되고 라이브러리 코드를 직접 수정할 수 있습니다. 만약, 단일 버전의 라이브러리 코드를 유지하려는 경우에는 이 방법이 적절하지 않을 수 있습니다. 이 경우, **방법 1**에서 안내한 내용에 따라 컴파일된 AAR 파일을 추가합니다.
+
+## 3. Permission 추가
+Klip SDK에서 HTTP 통신 사용을 허용하기 위해, `AndroidManifest.xml`파일에 아래와 같이 `android.permission.INTERNET`을 추가합니다.
+```xml
+<manifest ...>
+  <uses-permission android:name="android.permission.INTERNET" />
+</manifest>
+```
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+# API
+## 개요
+App2App API 요청은 크게 `prepare`, `request`, `getResult`의 순서로 진행이 됩니다.
+
+* `prepare`는 어떠한 요청을 할지 요청을 정의하는 단계로 총 5가지 종류의 요청이 존재
+* `request`는 함수 호출을 통해 Klip으로 화면이 전환되어 실제 서명 프로세스를 진행
+* `getResult`는 함수 호출을 통해 결과값을 받고 확인
+
+추가적으로 getCardList는 BApp 개발의 편의를 위해 Klip 사용자의 NFT 목록을 받아올 수 있도록 제공되는 함수입니다.
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+<br />
+
+## Klip.getInstance
+Klip SDK를 사용하기 위한 인스턴스를 생성합니다.
+
+**Parameters**
+| Name | Type | Description |
+| ---- | ---- | --- |
+| context | `Context` | 애플리케이션 컨텍스트 |
+
+**Return Value**
+| Type | Description |
+| ---- | --- |
+| `Klip` | Klip 인스턴스 |
+
+**Example**
+```java
+public class SampleActivity extends AppCompatActivity {
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    Klip klip = Klip.getInstance(this);
+  }
+}
+```
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## Klip.prepare
+App2App API 요청 처리를 준비하고 reqeust key를 발급합니다.  
+   
+**Request 값에 사용할 객체**
+* Klip 연결 타입(=인증)의 경우 `AuthRequest` 
+* KLAY 전송 타입의 경우 `KlayTxRequest` 
+* Token 전송 타입의 경우 `TokenTxRequest`
+* Card 전송 타입의 경우 `CardTxRequest`
+* Contract 실행 타입의 경우 `ContractTxRequest`
+
+**Parameters**
+| Name | Type | Description |
+| ---- | ---- | --- |
+| request | `KlipRequest` | 요청 타입에 따른 요청정보 |
+| bappInfo | `BAppInfo` | 요청 앱 정보 |
+| callback | `KlipCallback<KlipTxResponse>` | 요청 응답 결과를 받을 콜백함수입니다. 처리가 완료되면, 완료결과인 `KlipTxResponse`를 전송받고, 처리가 실패되면, 실패결과인`KlipErrorResponse`를 전송받습니다.|
+
+**Throws**
+| Type | Description |
+| ---- | --- |
+| `KlipRequestException` | 요청 예외 (ex, 필수 Parameter 미입력시 발생) |
+
+Klip 사용자에게 동의 요청시, request와 bappInfo에 입력된 정보가 출력됩니다.  
+응답 결과에 포함된 request key는 사용자에게 트랜잭션을 요청하기 위한 컨텍스트 키의 역할을 수행하며, 사용자 동의 요청 및 결과확인 API와 함께 사용됩니다.
+
+**Example 1. 사용자 정보 획득하기**
+```java
+// 사용자 정보 획득 요청문
+AuthRequest req = new AuthRequest();
+
+// BApp 정보
+BAppInfo bappInfo = new BAppInfo("BApp Name");
+
+// 응답 결과 Callback
+KlipCallback callback = new KlipCallback<KlipTxResponse>() {
+  @Override public void onSuccess(final KlipTxResponse res) {}
+  @Override public void onFail(final KlipErrorResponse res) {}
+}
+
+klip.prepare(req, bappInfo, callback);
+```
+
+**Example 2. KLAY 전송하기**
+```java
+// KLAY 전송 트랜잭션 요청문
+KlayTxRequest req = new KlayTxRequest.Builder()
+  .to("0x..receiver address..")
+  .amount("10")
+  .build();
+  
+klip.prepare(req, bappInfo, callback); // bappInfo, callback (example 1 참고)
+```
+
+**Example 3. Token 전송하기**
+```java
+// Token 전송 트랜잭션 요청문
+TokenTxRequest req = new TokenTxRequest.Builder()
+  .contract("0x..token contract address..")
+  .to("0x..receiver address..")
+  .amount("10")
+  .build();
+  
+klip.prepare(req, bappInfo, callback); // bappInfo, callback (example 1 참고)
+```
+
+**Example 4. Card 전송하기**
+```java
+// Card 전송 트랜잭션 요청문
+CardTxRequest req = new CardTxRequest.Builder()
+  .contract("0x..card contract address..")
+  .to("0x..receiver address..")
+  .cardId("9")
+  .build();
+  
+klip.prepare(req, bappInfo, callback); // bappInfo, callback (example 1 참고)
+```
+
+**Example 5. Contract 실행하기**
+```java
+// Contract 전송 트랜잭션 요청문
+ContractTxRequest req = new ContractTxRequest.Builder()
+  .to("0x..contract address..")
+  .value("10")
+  .abi("{..contract abi..}")
+  .params(new ArrayList<Object>(){
+    // contract parameters
+  })
+  .build();
+  
+klip.prepare(req, bappInfo, callback); // bappInfo, callback (example 1 참고)
+```
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## Klip.request
+Deep Link를 통해 Klip에 인증 또는 서명을 요청합니다.
+만약, 실행 중인 스마트폰 기기에 카카오톡이 설치되어 있지 않거나 Klip을 지원하지 않는 버전의 카카오톡이 설치되어 있으면 자동으로 Google Play의 카카오톡 다운로드 화면으로 이동됩니다.
+QR code를 이용한 request 스텝 처리는 [QR code 예제](rest-api-a2a.md#request-qr-code) 항목을 참조하십시오.
+
+**Parameters**
+| Name | Type | Description |
+| ---- | ---- | --- |
+| requestKey | String | (Klip 서버로부터 받은) 요청번호 |
+
+**Throws**
+| Type | Description |
+| ---- | --- |
+| `KlipRequestException` | 요청 예외 (ex, 필수 Parameter 미입력시 발생) |
+
+**Example**
+```java
+klip.request(requestKey);
+```
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## Klip.getResult
+App2App API 요청에 대한 결과를 확인합니다.
+
+**Parameters**
+| Name | Type | Description |
+| ---- | ---- | --- |
+| requestKey | String | (Klip 서버로부터 받은) 요청번호 |
+| callback | `KlipCallback<KlipTxResponse>` | 요청 응답 결과를 받을 콜백함수입니다. 처리가 완료되면, 완료결과인 `KlipTxResponse`를 전송받고, 처리가 실패되면, 실패결과인`KlipErrorResponse`를 전송받습니다.|
+
+**Throws**
+| Type | Description |
+| ---- | --- |
+| `KlipRequestException` | 요청 예외 (ex, 필수 Parameter 미입력시 발생) |
+
+**Example**
+```java
+KlipCallback callback = new KlipCallback<KlipTxResponse>() {
+  @Override public void onSuccess(final KlipTxResponse res) {}
+  @Override public void onFail(final KlipErrorResponse res) {}
+}
+
+Klip klip = Klip.getInstance();
+klip.getResult(requestKey, callback)
+```
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## Klip.getCardList
+사용자의 모든 카드 중 특정 카드의 목록을 가져옵니다.
+
+**Parameters**
+| Name | Type | Description |
+| ---- | ---- | --- |
+| cardAddress | String | 조회할 카드 주소 |
+| userAddress | String | 조회할 사용자 주소 |
+| cursor | String | (optional) 조회할 커서값입니다. 만약, 조회할 카드의 보유목록이 100개 이상이면, 다음 100개 정보를 받을 수 있습니다. |
+| callback | `KlipCallback<CardListResponse>` | 요청 응답 결과를 받을 콜백함수입니다. 처리가 완료되면, 카드목록인 `CardListResponse`를 전송받고, 처리가 실패되면, 실패 결과인`KlipErrorResponse`를 전송받습니다.|
+
+**Throws**
+| Type | Description |
+| ---- | --- |
+| `KlipRequestException` | 요청 예외 (ex, 필수 Parameter 미입력시 발생) |
+
+**Example**
+```java
+KlipCallback callback = new KlipCallback<KlipCardListResponse>() {
+  @Override public void onSuccess(final KlipCardListResponse res) {}
+  @Override public void onFail(final KlipErrorResponse res) {}
+}
+
+Klip klip = Klip.getInstance();
+klip.getCardList("0x..card address..",
+  "0x..user address..",
+  null,
+  callback);
+```
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+# Error Code
+에러코드는 `KlipCallback`의 실패의 응답결과인 `KlipErrorResponse`의 `getErrorCode()`함수를 통해 확인할 수 있습니다.
+| Http Status | Error Code | Description |
+| ---- | --- |--- |
+| - | - | [Klip REST API 에러코드](basics.md)와 동일 |
+| 500 | 10 | Klip SDK에서 에러 발생 (ex, Http 연결 실패) |
+| 500 | 21 | Klip SDK에서 에러 발생 (Klip REST API 미지원 에러코드) |
+| 500 | 22 | Klip SDK에서 에러 발생 (Klip Protocol 에러) |
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
