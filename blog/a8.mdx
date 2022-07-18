@@ -1,0 +1,262 @@
+---
+title: "test"
+date: "2021-01-01"
+---
+
+---
+description: '이 튜토리얼은 App2App REST API를 손쉽게 사용할 수 있도록 작성된 개발자 가이드입니다. SDK도 기본적으로 REST API 기반이므로 아래 내용을 참고하실 수 있습니다.'
+---
+
+# App2App REST API Tutorial
+
+## 환경 설정
+
+App2App API는 별도의 가입 절차가 필요없고 기본적으로 HTTP 통신이 가능한 어느 환경에서도 동작 가능합니다. 다만, 카카오톡 더보기탭의 Klip을 실행하여 사용자의 승인을 받아야하기 때문에 기본적으로 모바일 카카오톡이 설치된 환경에서 호출 해야합니다. 
+
+{% hint style="info" %}
+현재 샌드박스 환경은 따로 제공되지 않으며 실제 카카오톡 계정으로 구현 및 테스트 가능합니다.
+{% endhint %}
+
+아래 예제는 REST API는 `curl` 명령을 수행하고, Deep Link는 각 모바일 환경의 SDK에서 제공하는 API를 호출하거나, 모바일웹 환경의 경우 `Web2App` 라이브러리를 이용하여 수행할 수 있습니다. `Web2App` 라이브러리는 아래 GitHub 저장소를 통해서 얻을 수 있습니다. 자세한 사용 방법은 해당 사이트를 참조하십시오.
+
+* [curl download](https://curl.haxx.se/download.html)
+* [Web2App GitHub repository](https://github.com/kakao/web2app)
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## Step 1 : Prepare
+
+App2App 처리 시 가정 먼저 수행해야할 Prepare 과정은 Klip에서 처리할 요청 데이터를 전달하고 Request Key를 발급받는 과정입니다. Reqeust Key는 Deep Link 호출 및 결과 확인 과정에서 필요합니다.
+
+요청의 종류는 `auth`와 `transaction`이 있으며, `transaction`은 다시 KLAY 전송 트랜잭션, 토큰 전송 트랜잭션, 카드 전송 트랜잭션, 그리고 컨트랙트 실행 트랜잭션으로 나뉩니다. 필요에 따라서 적절한 필드를 아래와 같이 설정하여 API를 호출합니다.
+
+{% hint style="info" %}
+트랜잭션 요청에서 공통으로 사용하는 `from` 필드에는 트랜잭션에 서명하는 Klip 사용자의 Klaytn 계정 주소를 설정합니다. 이 필드는 Optional이지만 BApp에서 의도한 사용자와 실제 Klip 사용자가 서로 일치하는지 검사하기 위한 필드이므로 설정하는 것을 권장합니다.
+{% endhint %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### Case 1) Auth 요청
+
+Auth 요청은 Klip 사용자의 EOA를 얻야할 때 사용합니다. 요청 예제는 아래와 같습니다.
+
+```bash
+curl -X POST "https://a2a-api.klipwallet.com/v2/a2a/prepare" \
+-d '{"bapp": { "name" : "My BApp" }, "callback": { "success": "mybapp:\/\/klipwallet\/success", "fail": "mybapp:\/\/klipwallet\/fail" }, "type": "auth" }' \
+-H "Content-Type: application/json"
+```
+
+{% hint style="info" %}
+API 요청 헤더에 `Authorization`, `Cookie` 등의 필드를 넣으면 CORS 설정 때문에 에러가 발생할 수 있습니다. 문서에 설명된 필드 이외에 추가로 넣지 않도록 유의해야합니다.
+{% endhint %}
+
+
+요청이 정상 처리되면 아래 값을 받습니다.  
+### 
+
+```json
+{
+  "request_key": "0b0ee0ad-62b3-4146-980b-531b3201265d", // random string
+  "status": "prepared", // 정상적으로 처리된 경우. 만약 문제가 있다면 "error" 상태가 넘어옴.
+  "expiration_time": 1600011054 //unix timestamp
+}
+```
+
+`callback` 객체의 `success` 필드에는 Request 처리 성공 시 다시 BApp으로 되돌아올 Deep Link를 설정합니다. `fail`의 경우는 잔고 부족 등으로 처리에 실패했을 때 되돌아올 Deep Link를 설정합니다. BApp에서 Deep Link를 지원하지 않는 경우 세팅하지 않아도 되며, 이 때는 Klip에서 BApp으로 다시 명시적으로 되돌아가야 처리가 완료됨을 안내합니다.
+
+### Case 2) Send KLAY 요청
+
+Send KLAY 요청은 Klip 사용자의 KLAY를 지정된 주소로 보낼 때 사용합니다. 요청 예제는 아래와 같습니다.
+
+```bash
+curl -X POST "https://a2a-api.klipwallet.com/v2/a2a/prepare" \
+-d '{"bapp": { "name" : "My BApp" }, "type": "send_klay", "transaction": { "from": "0xcD1722f2947Def4CF144679da39c4C32bDc35681", "to": "0x85c17299e9462e035c149847776e4edb7f4b2aa9", "amount": "100" } }' \
+-H "Content-Type: application/json"
+```
+
+`to`에는 KLAY을 받을 주소를 설정하고, `amount`에는 보낼 KLAY를 설정합니다. 소수점 6자리까지만 지원합니다.
+
+요청이 정상 처리되면 Auth 요청 예시와 동일한 형태의 값을 받습니다.  
+
+### Case 3) Send Token 요청
+
+Send Token 요청은 Klip 사용자의 토큰을 지정된 주소로 보낼 때 사용합니다. 요청 예제는 아래와 같습니다.
+
+```bash
+curl -X POST "https://a2a-api.klipwallet.com/v2/a2a/prepare" \
+-d '{"bapp": { "name" : "My BApp" }, "type": "send_token", "transaction": { "contract": "0xdc8c8d2CD5829dE8e8a31Fc595D69c4B403e9dD8", "from": "0xcD1722f2947Def4CF144679da39c4C32bDc35681", "to": "0x85c17299e9462e035c149847776e4edb7f4b2aa9", "amount": "100" } }' \
+-H "Content-Type: application/json"
+```
+
+`transaction` 객체의 `contract` 필드에는 Klip에서 제공하는 토큰의 컨트랙트 주소(SCA)를 설정해야 합니다. Klip에서 서비스하지 않는 토큰을 설정한 경우 에러가 발생합니다. `amount` 필드에는 보낼 토큰의 양을 설정합니다. 소수점 6자리까지만 지원합니다.
+
+요청이 정상 처리되면 Auth 요청 예시와 동일한 형태의 값을 받습니다.  
+
+### Case 4) Send Card 요청
+
+Send Card 요청은 Klip 사용자의 카드를 지정된 주소로 보낼 때 사용합니다. 요청 예제는 아래와 같습니다.
+
+```bash
+curl -X POST "https://a2a-api.klipwallet.com/v2/a2a/prepare" \
+-d '{"bapp": { "name" : "My BApp" }, "type": "send_card", "transaction": { "contract": "0xB21F0285d27beb2373ECB5c17E119ccEAd7Ee10A", "from": "0xcD1722f2947Def4CF144679da39c4C32bDc35681", "to": "0x85c17299e9462e035c149847776e4edb7f4b2aa9", "card_id": "1234" } }' \
+-H "Content-Type: application/json"
+```
+
+`transaction` 객체의 `contract` 필드에는 Klip에서 제공하는 카드의 컨트랙트 주소(SCA)를 설정해야 합니다. Klip에서 서비스하지 않는 SCA를 설정한 경우 에러가 발생합니다. `card_id` 필드에는 보낼 토큰의 고유번호를 설정합니다.
+
+요청이 정상 처리되면 Auth 요청 예시와 동일한 형태의 값을 받습니다.  
+
+### Case 5) Execute Contract 요청
+
+Execute Contract 요청은 Klip 사용자의 서명으로 지정된 스마트 컨트랙트 함수를 수행할 때 사용합니다. 요청 예제는 아래와 같습니다.
+
+```bash
+curl -X POST "https://a2a-api.klipwallet.com/v2/a2a/prepare" \
+-d '{"bapp": { "name" : "My BApp" }, "type": "execute_contract", "transaction": { "to": "0xd4fFbe967c31C29199478Be2b5A53dC69eF9B825", "value": "0", "abi": "{ \"constant\": false, \"inputs\": [ { \"name\": \"a\", \"type\": \"string\" } ], \"name\": \"testString\", \"outputs\": [], \"payable\": false, \"stateMutability\": \"nonpayable\", \"type\": \"function\" }", "params": "[\"test_string\"]" } }' \
+-H "Content-Type: application/json"
+```
+
+`transaction` 객체의 `to` 필드에는 실행할 컨트랙트의 주소(SCA)를 설정합니다. `value` 필드에는 전송할 KLAY를 peb 단위로 설정합니다. payable 함수인 경우에만 설정할 수 있습니다. `abi`에는 실행할 함수의 ABI를 입력합니다. `params`에는 해당 함수를 실행한 인자를 배열 형태의 문자열을 설정합니다. `abi` 및 `params` 필드는 String 타입임을 유의하여 전송합니다.
+
+요청이 정상 처리되면 Auth 요청 예시와 동일한 형태의 값을 받습니다.  
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## Step 2 : Request
+
+Request는 BApp에서 Klip에 App2App 처리를 요청하기 위한 Deep Link를 실행하는 과정입니다. Deep Link를 통해 Klip이 실행된 경우, 사용자에게 확인 창이 뜨게됩니다. 인증의 경우는 BApp에 EOA를 제공에 동의를 구하는 창이 뜨게되며, 트랜잭션 처리의 경우 요청한 트랜잭션 데이터를 화면에 보여주고, pin code 입력받아서 실제 트랜잭션을 처리하게됩니다.
+
+만약 Prepare 과정에서 callback Deep Link를 설정한 경우, BApp으로 자동으로 넘어갑니다. 설정하기 않은 경우 사용자에게 BApp으로 되돌아가기 위한 안내 메시지를 제공합니다.
+
+Klip에서 제공하는 Deep Link는 환경별로 아래와 같습니다. 공통적으로 `request_key`를 쿼리 스트링으로 받습니다. Prepare 과정에서 얻은 값을 설정합니다.
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### Case 1) iOS 환경
+
+```text
+kakaotalk://klipwallet/open?url=https://klipwallet.com/?target=/a2a?request_key=0b0ee0ad-62b3-4146-980b-531b3201265d
+```
+
+`kakaotalk` URL scheme이 존재 여부를 iOS에서 제공하는 API를 이용하여 BApp에서 감지할 수 있습니다. 보통 카카오톡이 설치되지 않은 경우에 해당하며 다운받을 수 있는 스토어로 이동하는 링크는 아래와 같습니다.
+
+```text
+itms-apps://itunes.apple.com/app/id362057947
+```
+
+
+### Case 2) Android 환경
+
+```text
+intent://klipwallet/open?url=https://klipwallet.com/?target=/a2a?request_key=0b0ee0ad-62b3-4146-980b-531b3201265d#Intent;scheme=kakaotalk;package=com.kakao.talk;end
+```
+
+`kakaotalk` URL scheme이 존재 여부를 Android에서 제공하는 API를 이용하여 BApp에서 감지할 수 있습니다. 보통 카카오톡이 설치되지 않은 경우에 해당하며 다운받을 수 있는 스토어로 이동하는 링크는 아래와 같습니다.
+
+```text
+market://details?id=com.kakao.talk
+```
+
+{% hint style="info" %}
+모바일웹 환경에서 BApp을 구현하는 경우 [Web2App](https://github.com/kakao/web2app) 라이브러리를 이용하여 구현하는 것이 편리합니다.
+{% endhint %}
+
+## Step 3 : Result
+
+App2App API 요청의 최종 상태는 아래와 같이 Result API를 polling하여 얻을 수 있습니다. Prepare 과정에서 얻은 `request_key`값을 쿼리 스트링으로 설정합니다.
+
+```bash
+curl -X GET "https://a2a-api.klipwallet.com/v2/a2a/result?request_key=0b0ee0ad-62b3-4146-980b-531b3201265d" \
+-H "Content-Type: application/json"
+```
+
+요청이 정상 처리되면 요청 `type`별로 아래 값을 받습니다.  
+
+### Case 1) Auth 요청
+
+```json
+{
+  "request_key": "0b0ee0ad-62b3-4146-980b-531b3201265d",
+  "expiration_time": 1600011054,
+  "status": "completed",
+  "result": {
+    "klaytn_address": "0x85c17299e9462e035c149847776e4edb7f4b2aa9"
+  }
+}
+```
+
+### Case 2) Auth 이외의 요청
+
+```json
+{
+  "request_key": "0b0ee0ad-62b3-4146-980b-531b3201265d",
+  "expiration_time": 1600011054,
+  "status": "completed",
+  "result": {
+    "tx_hash": "0x82d018556e88b8f8f43dc2c725a683afc204bfd3c17230c41252354980f77fb3",
+    "status": "success"
+  }
+}
+```
+
+`Auth`가 아닌 다른 요청 타입일 경우 `result` 객체가 추가로 넘어옵니다. `result` 객체의 `tx_hash` 필드를 복사해 [Klaytnscope](https://scope.klaytn.com/)에서 사용하면 트랜잭션의 처리 상태에 관한 자세한 정보를 확인할 수 있습니다. `result` 객체의 `status` 필드는 `pending` 상태의 경우, 사용자가 Klip에서 확인했자만, Klaytn에서 아직 트랜잭션을 처리하는 중임을 의미합니다. 일반적으로 몇 초 후에 다시 확인하면 요청을 확인할 수 있습니다. `success`는 요청이 성공적으로 처리될 때, `fail`은 요청 처리에 실패할 때의 상태입니다.
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## Get Additional Information
+
+일반적으로 BApp에서 카드를 전송하기 위해서는 사용자가 보유하고 있는 카드 목록을 조회하여 고유번호를 얻어야하는 경우가 많습니다. Auth 과정을 통해서 얻은 EOA와 조회하려는 컨트랙트의 주소를 인자로 삼아서 해당 EOA가 컨트랙트에 소유하고 있는 카드 목록을 조회할 수 있습니다.
+
+요청 예제는 아래와 같습니다.
+
+```bash
+curl -X GET "https://a2a-api.klipwallet.com/v2/a2a/cards?sca=0xB21F0285d27beb2373ECB5c17E119ccEAd7Ee10A&eoa=0x85c17299e9462e035c149847776e4edb7f4b2aa9&cursor=" -H "Content-Type: application/json"
+```
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```json
+{
+    "name": "conan",
+    "symbol_img": "https://media.klipwallet.com/token_icon/klay_klip.svg",
+    "cards": [
+    {
+      "created_at": 1580176787,
+      "created_at_format": "format",
+      "updated_at": 1580176787,
+      "updated_at_format": "format",
+      "owner": "0x85c17299e9462e035c149847776e4edb7f4b2aa9",
+      "sender": "0x2412b300750f505fb2e68ddf0cd45e9d95f5378d",
+      "sender_kakao_id": "1234"
+      "card_id": 19,
+      "card_uri": "https://media.klipwallet.com/card-asset/1234/19.json",
+      "transaction_hash": "0x293a2e53ecf238109908e65a2b7ff4aad0919ce3ce54af08d6fc4323f28e935d"
+    },
+    ],
+    "next_cursor": "mrzedXOE9OeEorkAvwQXB7JdVg4LP1Rzze2kLQFxLU4C8iMOhOVulzIr5iesZoie9uv9h87UNXsWCKdhqYszXFWLsYYI7h125Rx8p56qlMKaZ20YbNW3zDGmNBJKM1wL"
+}
+```
+
+카드 정보가 정상 조회되었다면 계정이 이 BApp에서 소유한 카드 목록과 정보를 받습니다.  
+
+* `cards`에서 **card**는 이 bapp에서 쓰이는 Klip 카드입니다. bapp에는 카드 1종류가 들어있습니다.  
+* Query 파라미터로 `cursor` 또는 `isAll` 둘 중 하나만 사용해야 합니다(`isAll`이 `false`이면 `cursor`를 사용할 수 있습니다).  
+* `cursor`를 사용하면 Pagination을 사용합니다.  
+  * 1회 요청에 최대 카드 100개의 정보를 받습니다.  
+  * 정보를 불러울 카드가 100개를 초과 시 다음 카드 정보를 불러올 수 있는 커서값인 `next_cursor`로 나머지 카드 정보를 받습니다.  
+  * 나머지 카드 정보를 받으려면 `cursor`에 이전 호출에서 받은 `next_cursor`를 넣고 API를 다시 호출합니다. 
+
+위 예시에서 `cards.next_cursor`값이 존재하므로 이 계정은 **conan** 카드를 100개 이상 가지고 있습니다.  
+한 번에 조회할 카드 개수가 100개를 초과한다면 1회 호출 시 카드 100개 정보만 받고 `cards.next_cursor`값을 받습니다.  
+나머지 카드 정보를 조회하려면 `cards.next_cursor`값을 Query 파라미터 `cursor`에 전달하고 API를 다시 호출해야 합니다.  
+   
+예를 들어, 정보를 불러올 카드 개수가 150개라면, 먼저 API를 호출하여 카드 100개의 정보와 `cards.next_cursor`값을 받습니다.  
+그리고 동일한 API를 다시 호출할 때 `cards.next_cursor`값을 Query 파라미터 `cursor`로 사용하면 나머지 50개의 정보를 받습니다.  
+
+요청이 정상적으로 처리되지 않은 경우 HTTP 400 또는 500이 리턴되며 자세한 내용은 [Basics](basics.md#basics-app2app)를 참조하십시오.
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.

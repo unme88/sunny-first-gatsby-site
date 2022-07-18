@@ -1,0 +1,88 @@
+---
+title: "test"
+date: "2021-01-01"
+---
+
+---
+description: >-
+  이 페이지는 Klip과 Klip 개발자 가이드를 소개합니다.
+---
+
+# Klip
+Klip은 사용자의 디지털 자산을 쉽고 편리하게 관리해 주는 개인 디지털 지갑 서비스입니다. 지금까지 다양한 블록체인 지갑이 있었지만, 어려운 사용자 경험으로 인해 제한적으로 활용되었습니다. Klip은 카카오톡에 연동되어 메신저만큼 쉬운 사용자 경험을 제공합니다. 또한, [Klaytn](https://www.klaytn.com/) 기반의 다양한 블록체인 서비스들을 소개하는 창구 기능을 하며 블록체인 서비스 확산에 기여할 것입니다. Klip에 관한 자세한 내용은 카카오톡 설치 후 하단 메뉴 더보기탭\[…\]을 클릭하시면 전체 서비스에서 확인할 수 있습니다.
+<br /><br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+# BApp과 카드
+BApp(Blockchain Application)은 디앱(DApp)과 유사하지만, DApp과 달리 탈중앙화를 넘어 블록체인의 다른 많은 장점까지 흡수한 더 포괄적인 개념입니다. BApp에 관한 자세한 내용은 [Klaytn BApp](https://ko.docs.klaytn.com/misc/vision/bapps)을 확인하시기 바랍니다.  
+   
+카드란 Klip에서 사용될 디지털 자산입니다. Klip 파트너사는 자산\(게임 아이템, 할인 쿠폰 등\)을 카드 형태로 발행하고 Klip 사용자 또는 BApp 사용자에게 보낼 수 있습니다. 사용자는 카드를 받고 카카오톡 더보기탭에 있는 Klip 지갑에서 원하는 카드를 사용하거나 또 다른 사람에게 보낼 수 있습니다. 이 과정에서 Klip 파트너사는 자신의 BApp을 잠재 고객에게 알리고 이들을 구매 고객으로 전환할 수 있습니다.
+
+모든 카드는 기본적으로 [**대체 불가 토큰**](https://ko.docs.klaytn.com/smart-contract/token-standard#non-fungible-token-standard-kip-17)\(Non-Fungible Token\)입니다. 대체 불가 토큰은 간단하게 말하면 "화폐"\(비트코인, 이더리움 등\)가 아닌 "**고유한 자산**"입니다. 5만원권 지폐 1장은 다른 5만원권 지폐 1장으로 완벽히 **대체 가능**합니다. 하지만, 내 예술 작품은 다른 이의 예술 작품으로 **대체 불가능**합니다. 다른 이의 명작이 주는 가치와 내 명작이 주는 가치가 서로 같지 않고 비교하기도 어렵기 때문입니다. 이렇게 수집품, 예술 작품, 개인용 물품 등 고유한 자산을 디지털화하여 블록체인상에 토큰 형태로 표현한 것이 바로 대체 불가 토큰입니다. 카드는 BApp에서 사용하는 대체 불가 토큰이며 Klip 사용자는 Klip에서 카드를 쓰고 교환합니다.
+<br /><br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+# Klip API
+Klip API는 외부 서비스에서 API를 통해 Klip에 있는 KLAY 및 대체 가능한 토큰(FT)을 전송하거나 Klip에서 카드(NFT)를 발행, 조회, 전송 또는 삭제하는 기능을 제공합니다. Klip API는 Card Minting API와 App2App API로 구성됩니다.
+
+## Card Minting API <a id="intro-card-minting-api"></a>
+Card Minting API는 서비스에 가입한 파트너사에서 직접 카드를 발행, 조회, 전송, 삭제하기 위한 API입니다. 복잡한 스마트 컨트랙트 배포나 관리 및 운영없이 간단한 API를 사용하여 카드를 활용하는 BApp을 개발할 수 있습니다. Card Minting API를 사용하기 위한 절차는 아래와 같습니다.
+
+{% hint style="info" %}
+[Klip Partners](https://partners.klipwallet.com)는 현재 허가된 사용자만 접근이 가능합니다. 서비스 이용을 희망하는 파트너사는 원활한 사업 논의를 위해서 (1)회사 소개, (2)카드 활용 목적, (3)카드 활용 방안 등을 서면으로 정리해 klip-partners@groundx.xyz로 보내주시길 바랍니다.
+{% endhint %}
+
+1. [Klip Partners](https://partners.klipwallet.com)에 가입 신청을 합니다.
+2. Klip 운영진과 별도 협의를 거쳐 가입 승인을 얻은 후 [Sign In](rest-api-card-minting.md#sign-in)으로 사이트에 로그인합니다.
+3. 로그인 후, [Upload Image](rest-api-card-minting.md#upload-image)로 카드 이미지로 쓸 이미지 파일을 업로드합니다.
+4. [Mint Card To User](rest-api-card-minting.md#mint-card-to-user) 또는 [Mint Card To Klip Member](rest-api-card-minting.md#mint-card-to-klip-member)로 업로드한 이미지를 사용해 카드를 직접 발행합니다.
+5. [Get Card Information By BApp](rest-api-card-minting.md#get-card-information-by-bapp), [Get Card Information](rest-api-card-minting.md#get-card-information)으로 발행한 카드 정보를 조회합니다.
+6. [Send Card To User](rest-api-card-minting.md#send-card-to-user) 또는 [Send Card To Klip Member](rest-api-card-minting.md#send-card-to-klip-member)로 발행한 카드를 다른 사람에게 전송합니다.
+
+또한 API를 통해서 계정 및 카드를 쉽게 관리합니다.
+
+* [Sign In](rest-api-card-minting.md#sign-in)으로 로그인한 후
+  * [Change Password](rest-api-card-minting.md#change-password)로 계정 비밀번호를 변경합니다.
+  * [Change Pin](rest-api-card-minting.md#change-pin)으로 핀 번호를 변경합니다.
+  * [Delete Card](rest-api-card-minting.md#delete-card)로 카드 정보를 조회하고 카드를 삭제합니다.
+
+![Card Minting](./assets/card-minting-api.png)
+
+## App2App API <a id="intro-app2app-api"></a>
+App2App API는 BApp 개발자가 별도 가입 절차없이 Klip 사용자를 인증하고 해당 사용자의 토큰 및 카드를 전송하기 위한 API입니다. 또한 직접 개발한 스마트 컨트랙트 실행을 Klip 사용자에게 요청할 수 있습니다. 기본적으로 카카오톡이 설치된 모바일 환경에서 BApp에서 Deep Link를 통해 Klip에 서명을 요청하는 방식으로 동작합니다.
+
+App2App API는 아래와 같은 상황에서 활용할 수 있습니다.
+
+* BApp 사용자의 Klip 지갑 주소 인증
+* Klip을 통한 KLAY, 토큰 전송
+* Klip을 통한 카드 조회 및 전송
+* Klip을 통한 smart contract 실행
+
+App2App API를 사용하기 위한 절차는 아래와 같습니다.
+
+* [다운로드](a2a-sdk-download.md) 탭에서 BApp 개발환경에 맞는 SDK를 다운로드 받아 설치합니다. 또는 REST API를 이용할 수도 있습니다.
+* Prepare, Request 및 Result API를 이용하여 Klip 사용자 인증 또는 서명 기능을 BApp에 구현합니다. Prepare 스텝에서 App2App API 요청을 위한 key를 발급받고, Request 스텝에서 Klip을 실행합니다. 마지막 Result 스텝에서 요청에 대한 결과를 확인할 수 있습니다.
+* 참고로 PC 또는 물리적으로 떨어진 모바일 환경에서는 QR code를 이용하여 Request 스텝을 처리할 수 있습니다. 자세한 내용은 [App2App REST API](rest-api-a2a.md#request) 탭을 참조하십시오.
+
+![App2App API](./assets/a2a-api.png)
+
+<br /><br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+# 이 문서에 관하여
+Klip 개발자 가이드는 BApp 개발자 또는 파트너사가 Klip에서 제공하는 다양한 API를 활용하여 토큰(FT)을 조회하고 전송하거나 카드(NFT)를 발행, 조회, 전송 또는 삭제하도록 안내하는 문서입니다.
+
+| 페이지 | 설명 |
+| :--- | :--- |
+| [Introduction](README.md) | Klip과 Klip API를 소개합니다. |
+| [Basics](basics.md) | 인증, 페이지네이션, 에러코드, 용어를 소개합니다. |
+| [REST API](rest-api.md) | Card Minting API와 App2App API를 소개합니다.  |
+| [App2App SDK](a2a-sdk.md) | App2App API를 Javascript, Android, iOS 환경에서 제공하는 SDK를 소개합니다. |
+| [Tutorial](tutorial.md) | Card Minting API와 App2App API 튜토리얼을 소개합니다. |
+| [Change Log](changelog.md) | API 변경 이력을 소개합니다. |
+
+{% hint style="warning" %}
+이 문서는 API 또는 개발에 관한 기본적인 정보를 포함하고 있습니다. 이 정보는 변경될 수 있으며 이 문서를 따라 구현한 소프트웨어는 반드시 최종적으로 운영 체제 소프트웨어와 함께 테스트되어야 합니다.
+{% endhint %}
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.

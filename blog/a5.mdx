@@ -1,0 +1,546 @@
+---
+title: "test"
+date: "2021-01-01"
+---
+
+---
+description: '이 페이지에서는 BApp에서 Klip을 활용하기 위한 App2App REST API를 설명합니다.'
+---
+
+# ※ 개요 <a id="api-intro"></a>
+App2App API를 사용하는 단계는 **Prepare, Request, Result** 3단계로 구분됩니다.
+
+{% hint style="warning" %}
+* Klip API를 사용함에 있어 사용자는 (주)그라운드엑스를 사칭해서는 안됩니다.
+* Klip API 사용에 따라 발생하는 모든 책임은 전적으로 사용자에게 있으며, (주)그라운드엑스는 사용자 또는 제3자에 대해 어떠한 책임도 지지 않습니다.
+* Klip API 사용자가 과도한 네트워크 트래픽을 발생시키는 시도하는 등 불법 혹은 비정상적인 방식으로 API를 사용하려고 시도하는 경우, 사전 고지없이 API 사용이 차단될 수 있습니다.
+{% endhint %}
+
+## Prepare
+BApp에서 어떤 작업을 실행하고 싶은지 정의하는 단계입니다. "인증"을 제외한 나머지는 Klaytn에 트랜잭션을 전송하는 작업입니다. 트랜잭션 전송을 위해 Prepare 단계에서는 트랜잭션 객체를 생성합니다. 실행 가능한 작업은 다음과 같습니다.
+
+* **인증**
+* **KLAY 전송**
+* **토큰 전송**
+* **카드 전송**
+* **스마트 컨트랙트 실행**
+
+### 인증
+BApp 회원의 Klip 지갑에 접근하기 위한 인증 작업입니다. BApp에서 Klip 사용자의 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas)를 얻어야할 때 사용합니다. 이 기능을 위한 Klip 로그인 버튼을 제공하는 경우, 버튼 스타일과 버튼명은 아래 가이드를 준수해야 합니다.
+
+#### Klip 로그인 버튼 가이드
+
+* Klip App2App 버튼 제작 가이드 ([pdf](https://media.klipwallet.com/a2a/klip_A2A_button_guide_v1.0.0.pdf), [figma](https://www.figma.com/file/FZuqElOlwYGbQOsjDx8g1c/A2A-%EB%B2%84%ED%8A%BC-%EC%A0%9C%EC%9E%91-%EA%B0%80%EC%9D%B4%EB%93%9C-v.1.0.0?node-id=0%3A1))
+* Klip App2App 버튼 템플릿 [다운로드](https://media.klipwallet.com/a2a/klip_A2A_button_template_v1.0.0.zip)
+
+{% hint style="warning" %}
+이 기능을 사용하는 경우, Klip 계정을 연결 해지하는 기능도 반드시 제공해야 하며 해지 시 수집한 사용자 EOA 정보를 즉시 삭제해야 합니다.
+
+위와 같은 조건이 지켜지지 않을 경우, 사전 고지없이 API 사용이 차단될 수 있습니다.
+{% endhint %}
+
+### KLAY 전송
+BApp 회원의 Klip 지갑에서 다른 Klaytn 계정 주소(EOA)로 KLAY를 전송하는 작업입니다. KLAY 전송을 위한 트랜잭션 객체를 생성합니다.
+
+### 토큰 전송
+BApp 회원의 Klip 지갑에서 다른 Klaytn 계정 주소(EOA)로 토큰(Fungible Token)을 전송하는 작업입니다. 토큰 전송을 위한 트랜잭션 객체를 생성합니다.
+
+### 카드 전송
+BApp 회원의 Klip 지갑에서 다른 Klaytn 계정 주소(EOA)로 카드(Non-Fungible Token)을 전송하는 작업입니다. 카드 전송을 위한 트랜잭션 객체를 생성합니다.
+
+### 스마트 컨트랙트 실행
+Klip 계정으로 스마트 컨트랙트를 실행하는 작업입니다. 컨트랙트 실행을 위한 트랜잭션 객체를 생성합니다.
+
+{% hint style="info" %}
+Prepare API 호출에 성공하면 응답값으로 “인증키"(Request Key)를 받습니다.  
+인증키는 Prepare 단계에서 정의한 작업을 실제로 실행하도록 요청하는 "Request" 및 "Result" 단계에서 사용합니다.
+{% endhint %}
+
+## Request <a id="request"></a>
+위 단계에서 정의한 작업을 실제로 실행하도록 요청합니다. 
+
+"인증"은 BApp 회원의 Klip 지갑 주소(EOA)를 BApp으로 받아오는 작업이며 그 외에 나머지 작업은 위 트랜잭션에 서명(Signature)를 받는 작업입니다. 이들 4가지 작업은 사실 Klaytn에 트랜잭션 전송을 요청하는 작업이며 토큰 전송, KLAY 전송, 카드 전송, 스마트 컨트랙트 실행 트랜잭션을 Klaytn에 전송합니다. 이 단계에서는 이들 트랜잭션에 Klaytn 계정 키로 서명(Signature)한 다음 Klaytn에 전송합니다.
+
+{% hint style="info" %}
+인증 또는 서명은 Deep Link를 통해 Klip에 요청합니다.
+{% endhint %}
+
+예를 들어, BApp 회원 “A”가 다른 BApp 회원 “B”에게 토큰 또는 아이템을 전송하는 버튼을 클릭하면 여러분의 BApp은 App2App API를 사용해 “A”의 Klip 지갑 주소를 인증(생략 가능)하고 “A”의 Klip 지갑에 접근합니다. 그리고 전송하려는 토큰 또는 카드를 “B”의 Klaytn 계정 주소에 전송하는 트랜잭션을 보냅니다.
+
+## Result
+마지막으로 Result 단계는 Request 단계에서 요청한 작업을 실행했을 때 결과 또는 응답값을 얻는 단계입니다.  
+   
+API는 형태에 따라서 두 가지로 구분할 수 있습니다. 먼저 Prepare와 Result 스텝은 Klip Backend 서버로 요청을 날리는 REST API 형태이고, Request 스텝은 Klip을 띄워서 처리하기 위한 Deep Link 형태입니다. 앞선 두 가지와 별개로 필요 시 사용자의 카드 소유 정보를 얻기위한 REST API 형태의 요청이 있습니다.
+
+# ※ API Flow Diagram
+App2App 처리를 위한 대략적인 흐름은 아래 그림과 같습니다.
+
+![App2App Flow](./assets/a2a-basic-flow.png)
+
+API 요청과 별개로 카드 정보 조회는 일반적인 REST API 호출 흐름과 동일합니다. Klip 거치지 않고 Backend에 요청하여 정보를 받아옵니다. 흐름은 아래와 같습니다.
+
+![App2App Information API Flow](./assets/a2a-info-api-flow.png)
+
+Deep Link는 iOS에서는 URL Scheme을 사용하고 Android 환경에서는 intentURI를 사용합니다. 먼저 URL Scheme은 아래와 같은 형태의 링크이고, BApp 유저가 클릭했을 때 카카오톡 더보기 탭의 Klip이 실행됩니다. `request_key` 필드에는 Prepare 과정에서 응답으로 전달받은 값을 사용합니다.
+
+```
+kakaotalk://klipwallet/open?url=https://klipwallet.com/?target=/a2a?request_key=9892...4aeb
+```
+
+Android 환경을 위한 IntentURI은 아래와 형태입니다.
+
+```
+intent://klipwallet/open?url=https://klipwallet.com/?target=/a2a?request_key=9892...4aeb#Intent;scheme=kakaotalk;package=com.kakao.talk;end
+```
+
+# ※ API Specification <a id="api-detial"></a>
+App2App API 세부 스펙은 아래와 같습니다.
+
+{% api-method method="post" host="https://a2a-api.klipwallet.com" path="/v2/a2a/prepare" %}
+{% api-method-summary %}
+Prepare
+{% endapi-method-summary %}
+
+{% api-method-description %}
+App2App API 요청 처리를 준비하고 request key를 발급합니다.
+{% endapi-method-description %}
+
+{% api-method-spec %}
+{% api-method-request %}
+{% api-method-headers %}
+{% api-method-parameter name="Content-Type" type="string" required=true %}
+application/json
+{% endapi-method-parameter %}
+{% endapi-method-headers %}
+
+{% api-method-body-parameters %}
+{% api-method-parameter name="bapp" type="object" required=true %}
+App2App API 요청을 수행할 BApp 정보입니다. 이름과 callback URL로 Deep Link를 함께 전달할 수 있습니다. `callback` 필드는 옵셔널입니다. 아래 예시를 참고하십시오.
+{% endapi-method-parameter %}
+
+{% api-method-parameter name="type" type="string" required=true %}
+App2App API 요청 type입니다. 인증은 `auth`, KLAY 전송은 `send_klay`, 토큰 전송은 `send_token`, 카드 전송은 `send_card`, 마지막으로 컨트랙트 실행은 `execute_contract`입니다.
+{% endapi-method-parameter %}
+
+{% api-method-parameter name="transaction " type="object" required=false %}
+서명할 데이터입니다. `to`, `amount`, `contract` 등의 정보가 들어가며 전송 요청 type별로 필요한 필드를 세팅해야합니다.
+`auth`를 제외한 요청 타입은 이 필드를 필수적으로 기입해야합니다. 아래 예시를 참고하십시오.
+{% endapi-method-parameter %}
+
+{% endapi-method-body-parameters %}
+{% endapi-method-request %}
+
+{% api-method-response %}
+{% api-method-response-example httpCode=200 %}
+{% api-method-response-example-description %}
+요청에 성공하면 request_key, status, expiration_time을 전달합니다.
+{% endapi-method-response-example-description %}
+
+```json
+{
+  "request_key": "random key",
+  "status": "prepared",
+  "expiration_time": 12345 //unix timestamp
+}
+```
+{% endapi-method-response-example %}
+
+{% api-method-response-example httpCode=400 %}
+{% api-method-response-example-description %}
+자세한 에러 코드는 [Success Codes/Error Codes](./basics.md#basics-a2a-return-code)를 참조합니다.
+{% endapi-method-response-example-description %}
+{% endapi-method-response-example %}
+
+{% api-method-response-example httpCode=500 %}
+{% api-method-response-example-description %}
+서버에서 예상치 못한 에러가 발생한 경우입니다. 자세한 에러 코드는 [Success Codes/Error Codes](./basics.md#basics-a2a-return-code)를 참조합니다.
+{% endapi-method-response-example-description %}
+{% endapi-method-response-example %}
+{% endapi-method-response %}
+{% endapi-method-spec %}
+{% endapi-method %}
+
+** `bapp` object 예시 **
+```json
+{
+  "bapp": {
+    "name": "My BApp",
+    "callback": { // all optional
+      "success": "mybapp://.../success/...",
+      "fail": "mybapp://.../fail/..."
+    }
+  }
+}
+```
+
+`name`은 인증 또는 서명 시 Klip 사용자 화면에 표시될 BApp의 이름입니다. `callback`의 `success` 필드는 Klip에서 사용자 확인이 성공적으로 처리됐을 때 BApp으로 돌아가기 위한 Deep Link입니다. `fail`은 반대로 실패한 경우 BApp으로 돌아가기 위한 Deep Link입니다. `callback` 객체는 optional입니다.
+
+
+** `transaction` object 예시 **
+
+1) type: `send_klay`
+```json
+{
+  "transaction": {
+    "from": "0x8756...4321", // optional
+    "to": "0x1234...5678",
+    "amount": "100"
+  }
+}
+```
+
+`to`는 KLAY를 전송받는 사람의 klaytn address입니다. `amount`를 받을 KLAY 양입니다. `from`은 Klip 사용자의 주소입니다. `from`은 optional 필드이고 Klip 사용자의 실제 주소와 비교하여 의도하지 않은 요청을 검사하는 용도로 사용됩니다.
+
+2) type: `send_token`
+```json
+{
+  "transaction": {
+    "contract": "SCA",
+    "from": "0x8756...4321", // optional
+    "to": "0x1234...5678",
+    "amount": "100",
+  }
+}
+```
+
+`contract`는 토큰의 스마트 컨트랙트 주소입니다. `to`는 토큰을 전송받는 사람의 Klaytn 계정 주소입니다. `amount`를 받을 토큰 양입니다.
+참고로, `amount`는 컨트랙트 내 decimal을 반영하여 자동으로 환산되는 수치입니다. 예를 들면, 18 decimal의 KIP-7 컨트랙트(FT 컨트랙트)에서 `amount` 1은 10^18 개의 최소 단위 토큰을 의미하게 됩니다.
+`from`은 Klip 사용자의 주소입니다. `from`은 optional 필드이고 Klip 사용자의 실제 주소와 비교하여 의도하지 않은 요청을 검사하는 용도로 사용됩니다.
+
+3) type: `send_card`
+```json
+{
+  "transaction": {
+    "contract": "0xA987...4321",
+    "from": "0x8756...4321", // optional
+    "to": "0x1234...5678",
+    "card_id": "100",
+  }
+}
+```
+
+`contract`는 토큰의 스마트 컨트랙트 주소입니다. `to`는 카드를 전송받는 사람의 Klaytn 주소입니다. `card_id`는 전송할 카드의 고유번호입니다. `from`은 Klip 사용자의 주소입니다. `from`은 optional 필드이고 Klip 사용자의 실제 주소와 비교하여 의도하지 않은 요청을 검사하는 용도로 사용됩니다.
+
+4) type: `execute_contract`
+```json
+{
+  "transaction": {
+    "from": "0x8756...4321", // optional
+    "to": "0xA987...4321", // contract address
+    "value": "1000000000000000000", // 단위는 peb. 1 KLAY
+    "abi": "...",
+    "params": "..."
+  }
+}
+```
+
+`to`는 실행할 스마트 컨트랙트 주소입니다. `value`는 해당 컨트랙트에 전송할 KLAY입니다. 단위는 peb입니다. 예를 들어, 1 KLAY는 1000000000000000000 peb입니다. `abi`는 실행할 컨트랙트 함수  정보입니다. `params`는 해당 함수에 넘겨줄 인자값입니다.
+`from`은 Klip 사용자의 주소입니다. `from`은 optional 필드이고 Klip 사용자의 실제 주소와 비교하여 의도하지 않은 요청을 검사하는 용도로 사용됩니다.
+ `abi` 및 `params`의 구체적인 예시는 튜토리얼을 참조하십시오.
+
+{% hint style="info" %}
+`from`은 optional 필드이지만 트랜잭션 처리 시 원래 의도했던 Klip 사용자가 맞는지 검증하는 용도로 사용되므로 가능하면 설정하는 것을 권장합니다.
+{% endhint %}
+
+**Request Example**
+
+```bash
+curl -X POST "https://a2a-api.klipwallet.com/v2/a2a/prepare" \
+-d '{"bapp": { "name" : "My BApp" }, "type": "execute_contract" }' \
+-H "Content-Type: application/json"
+```
+
+**Response Details**
+
+| 명칭 | 형식 | 설명 |
+| :--- | :--- | :--- |
+| request_key | string | 요청을 유니크하게 구분한 키값입니다. Request, Result API 호출 시 사용합니다. |
+| status | string | API 요청의 현재 상태입니다. 기본적으로 `prepared` 상태가 됩니다. |
+| expiration_time | number | request key 만료 시간을 unix timestamp로 표현한 값입니다. |
+
+{% hint style="info" %}
+`status`는 `prepared`, `requested`, `completed`, `canceled`, `error` 상태중 하나를 가집니다. `canceled` 상태는 사용자가 명시적으로 App2App 진행을 취소했을 때 설정됩니다.
+{% endhint %}
+
+자세한 내용은 [튜토리얼](tutorial-a2a-rest-api.md)을 확인하십시오.
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+{% api-method method="deep link" host="kakaotalk://klipwallet/open?url=https://klipwallet.com/?target=/a2a?" path="request_key=" %}
+{% api-method-summary %}
+Request
+{% endapi-method-summary %}
+
+{% api-method-description %}
+Klip에 인증 또는 서명을 요청하기 위해 Deep Link와 QR code 두가지 방식을 제공하고 있습니다. 구체적인 요청 방법은 개발 환경 별로 다릅니다. 먼저 Deep Link 방식의 경우 iOS에서는 `kakaotalk://`을 사용하고, android에서는 `intent://`를 사용합니다. 그리고 QR code 방식의 경우 `https://` 형식의 URL을 사용합니다. 자세한 예제는 아래 Request Example 항목을 참조하십시오.
+{% endapi-method-description %}
+
+{% api-method-spec %}
+{% api-method-request %}
+
+{% api-method-query-parameters %}
+{% api-method-parameter name="request_key" type="string" required=true %}
+Prepare 단계에서 얻은 request key를 전달합니다. `request_key`를 통해서 요청을 구분할 수 있습니다.
+{% endapi-method-parameter %}
+{% endapi-method-query-parameters %}
+{% endapi-method-request %}
+
+
+{% api-method-response %}
+{% api-method-response-example %}
+{% api-method-response-example-description %}
+Deep Link는 별도의 HTTP 응답이 없습니다. Result API 호출을 통해서 결과를 확인할 수 있습니다.
+{% endapi-method-response-example-description %}
+
+{% endapi-method-response-example %}
+{% endapi-method-response %}
+
+{% endapi-method-spec %}
+{% endapi-method %}
+
+**Request Example**
+
+아래 예제에서 `request_key` 필드는 Prepare 스텝에서 얻은 값으로 설정합니다.
+
+### iOS
+
+```text
+kakaotalk://klipwallet/open?url=https://klipwallet.com/?target=/a2a?request_key=9892...4aeb
+```
+
+### Android
+
+```text
+intent://klipwallet/open?url=https://klipwallet.com/?target=/a2a?request_key=9892...4aeb#Intent;scheme=kakaotalk;package=com.kakao.talk;end
+```
+
+### PC 또는 이기종 디바이스 환경 (QR code)<a id="request-qr-code"></a>
+
+아래와 같은 URL 형식으로 QR code를 생성합니다. 사용자는 Klip 또는 네이티브 카메라앱를 통해 QR code를 인식하여 App2App 요청을 처리할 수 있습니다.
+
+```text
+https://klipwallet.com/?target=/a2a?request_key=9892...4aeb
+```
+
+![QR code 샘플](./assets/qr-code-sample.png)
+
+{% hint style="info" %}
+QR code 생성을 위해서 개발 환경별로 아래 오픈소스 프로젝트를 참고하실 수 있습니다.
+
+* JavaScript : https://www.npmjs.com/package/qrcode
+* Android : https://github.com/zxing/zxing
+* iOS : https://github.com/EFPrefix/EFQRCode
+{% endhint %}
+
+
+{% api-method method="get" host="https://a2a-api.klipwallet.com" path="/v2/a2a/result?request_key=" %}
+{% api-method-summary %}
+Result
+{% endapi-method-summary %}
+
+{% api-method-description %}
+App2App API 요청에 대한 결과를 확인합니다.
+{% endapi-method-description %}
+
+{% api-method-spec %}
+{% api-method-request %}
+
+{% api-method-query-parameters %}
+{% api-method-parameter name="request_key" type="string" required=true %}
+Prepare 단계에서 얻은 request key를 전달합니다. `request_key`를 통해서 요청을 구분할 수 있습니다.
+{% endapi-method-parameter %}
+{% endapi-method-query-parameters %}
+{% endapi-method-request %}
+
+{% api-method-response %}
+{% api-method-response-example httpCode=200 %}
+{% api-method-response-example-description %}
+`request_key`에 해당하는 요청에 대한 현재 상태와 결과값을 확인할 수 있습니다. 요청 타입별에 따라서 다른 필드가 리턴됩니다. 자세한 예제는 아래 Request Example 항목을 참조하십시오.
+{% endapi-method-response-example-description %}
+```json
+{
+  "request_key": "random key",
+  "expiration_time": unix timestamp,
+  "status": "requested" or "completed",
+  "result": {
+    "klaytn_address": string
+  }
+}
+```
+{% endapi-method-response-example %}
+
+{% api-method-response-example httpCode=400 %}
+{% api-method-response-example-description %}
+자세한 에러 코드는 [basics.md#basics-a2a-return-code]을 참조합니다.
+{% endapi-method-response-example-description %}
+{% endapi-method-response-example %}
+
+{% api-method-response-example httpCode=500 %}
+{% api-method-response-example-description %}
+서버에서 예상치 못한 에러가 발생한 경우입니다. 자세한 에러 코드는 [basics.md#basics-a2a-return-code]을 참조합니다.
+{% endapi-method-response-example-description %}
+{% endapi-method-response-example %}
+{% endapi-method-response %}
+{% endapi-method-spec %}
+{% endapi-method %}
+
+**Request Example**
+
+```bash
+curl -X GET "https://a2a-api.klipwallet.com/v2/a2a/result?request_key=9892...4aeb" \
+-H "Content-Type: application/json"
+```
+
+**Response Details**
+
+1) type: `auth`
+
+```json
+{
+  "request_key": "random key",
+  "expiration_time": unix timestamp,
+  "status": "completed",
+}
+```
+
+| 명칭 | 형식 | 설명 |
+| :--- | :--- | :--- |
+| request_key | string | 요청 키값입니다. |
+| expiration_time | number | request key 만료 시간을 unix timestamp로 표현한 값입니다. |
+| status | string | API 요청의 현재 상태입니다. 처리가 완료되었다면 `completed` 상태가 리턴됩니다. |
+
+{% hint style="info" %}
+`status`는 `prepared`, `requested`, `completed`, `canceled`, `error` 상태중 하나를 가집니다. `canceled` 상태는 사용자가 명시적으로 App2App 진행을 취소했을 때 설정됩니다.
+{% endhint %}
+
+2) type: `auth` 이외의 타입
+
+```json
+{
+  "request_key": "random key",
+  "expiration_time": unix timestamp,
+  "status": "completed",
+  "result": {
+    "tx_hash": string,
+    "status": "success"
+  }
+}
+```
+
+| 명칭 | 형식 | 설명 |
+| :--- | :--- | :--- |
+| request_key | string | 요청 키값입니다. |
+| expiration_time | number | request key 만료 시간을 unix timestamp로 표현한 값입니다. |
+| status | string | API 요청의 현재 상태입니다. 처리가 완료되었다면 `completed` 상태가 리턴됩니다. |
+| result| object | 서명 요청의 결과입니다. transaction hash와 해당 transaction의 처리 상태가 리턴됩니다. |
+
+{% hint style="info" %}
+`result` object의 `status` 필드는 `pending` 상태의 경우, 사용자가 Klip에서 확인했자만, Klaytn에서 아직 트랜잭션을 처리하는 중임을 의미합니다. 일반적으로 몇 초후에 다시 확인하면 요청를 확인할 수 있습니다. 그리고 `success`는 요청이 성공적으로 처리됐을 때, `fail`은 요청이 실패했을 때의 상태를 나타냅니다.
+{% endhint %}
+
+자세한 내용은 [튜토리얼](tutorial-a2a-rest-api.md)을 확인하십시오.
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+{% api-method method="get" host="https://a2a-api.klipwallet.com" path="/v2/a2a/cards?cursor=" %}
+{% api-method-summary %}
+Get Card Information
+{% endapi-method-summary %}
+
+{% api-method-description %}
+사용자 EOA와 NFT 컨트랙트 주소를 입력하고, 이 사용자가 소유한 카드 중에서 이 NFT 컨트랙트에서 발행한 카드 목록을 반환합니다.
+{% endapi-method-description %}
+
+{% api-method-spec %}
+{% api-method-request %}
+
+{% api-method-query-parameters %}
+
+{% api-method-parameter name="sca" type="string" required=true %}
+소유 정보를 조회할 smart contract address입니다.
+{% endapi-method-parameter %}
+
+{% api-method-parameter name="eoa" type="string" required=true %}
+어떤 사용자 EOA의 카드 소유 정보를 얻어올지 특정합니다. 일반적으로 App2App `auth` 요청을 통해 얻은 EOA를 인자로 사용합니다.
+{% endapi-method-parameter %}
+
+{% api-method-parameter name="cursor" type="string" required=false %}
+카드 보유량이 100개 이상이면 다음 100개 정보를 받는 커서값입니다.
+{% endapi-method-parameter %}
+{% endapi-method-query-parameters %}
+{% endapi-method-request %}
+
+{% api-method-response %}
+{% api-method-response-example httpCode=200 %}
+{% api-method-response-example-description %}
+Contract의 기본정보와 소유한 카드 정보가 배열로 출력됩니다.
+{% endapi-method-response-example-description %}
+```json
+{
+    "name": "Klip",
+    "symbol_img": "image url",
+    "cards": [
+    {
+      "created_at": 1580176787,
+      "created_at_format": "format",
+      "updated_at": 1580176787,
+      "updated_at_format": "format",
+      "owner": "0x2412b300750f505fb2e68ddf0cd45e9d95f5378d",
+      "sender": "0x0000000000000000000000000000000000000000",
+      "sender_kakao_id": "kakao_id"
+      "card_id": 19,
+      "card_uri": "metadata uri",
+      "transaction_hash": "0x293a2e53ecf238109908e65a2b7ff4aad0919ce3ce54af08d6fc4323f28e935d"
+    },
+    ],
+    "next_cursor": string
+}
+```
+{% endapi-method-response-example %}
+
+{% api-method-response-example httpCode=400 %}
+{% api-method-response-example-description %}
+자세한 에러 코드는 [basics.md#basics-a2a-return-code]을 참조합니다.
+{% endapi-method-response-example-description %}
+{% endapi-method-response-example %}
+
+{% api-method-response-example httpCode=500 %}
+{% api-method-response-example-description %}
+서버에서 예상치 못한 에러가 발생한 경우입니다. 자세한 에러 코드는 [basics.md#basics-a2a-return-code]을 참조합니다.
+{% endapi-method-response-example-description %}
+{% endapi-method-response-example %}
+{% endapi-method-response %}
+{% endapi-method-spec %}
+{% endapi-method %}
+
+**Request Example**
+
+```bash
+curl -X GET "https://a2a-api.klipwallet.com/v2/a2a/cards?sca=0x1234...&eoa=0x9876...&cursor=mrzedXOE9OeEorkAvwQXB7JdVg4LP1Rzze2kLQFxLU4C8iMOhOVulzIr5iesZoie9uv9h87UNXsWCKdhqYszXFWLsYYI7h125Rx8p56qlMKaZ20YbNW3zDGmNBJKM1wL" \
+-H "Content-Type: application/json"
+```
+
+**Response Details**
+
+| 명칭 | 형식 | 설명 |
+| :--- | :--- | :--- |
+| name | string | 이 Contract 이름입니다. |
+| symbol_img | string | 이 Contract symbol image URL입니다. |
+| cards | array | 각 카드 정보를 담은 `object` 배열입니다. |
+| next_cursor | string | 카드 결과값이 100개 이상이면 다음 100개 정보를 불러올 커서값입니다. |
+
+**Response Details for** `cards[i]`
+
+| 명칭 | 형식 | 설명 |
+| :--- | :--- | :--- |
+| created_at | number | 카드가 발행된 시간입니다. |
+| updated_at | number | 카드가 업데이트된 시간입니다. |
+| owner | string | 이 계정 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소입니다. |
+| sender | string | 이 계정으로 카드를 보낸 사람의 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소입니다. |
+| card_id | number | 카드 ID입니다. |
+| card_uri | string | 카드 메타데이터가 담긴 JSON 파일 URL입니다. |
+| transaction_hash | string | 카드를 발행한 스마트 컨트랙트 트랜잭션 해시입니다. |
+
+자세한 내용은 [튜토리얼](tutorial-a2a-rest-api.md)을 확인하십시오.
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.

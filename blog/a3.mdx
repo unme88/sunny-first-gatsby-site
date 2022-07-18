@@ -1,0 +1,110 @@
+---
+title: "test"
+date: "2021-01-01"
+---
+
+---
+description: '이 페이지는 Klip API 업데이트 기록을 제공합니다.'
+---
+
+# 2022/03/08
+* 개발자 포럼 URL 변경.
+
+# 2021/09/30
+* App2App result status에 `canceled` 추가.
+
+# 2021/07/28
+* animation_url 필드 제약 사항 업데이트.
+
+# 2021/07/13
+* App2App 인증 API 사용 시 주의사항 문구 추가.
+
+# 2021/07/07
+* App2App SDK 오픈소스 고지문에 사명 변경 사항 반영.
+  * Ground1 -> GroundX, Ground X -> GroundX
+
+# 2021/06/28
+* App2App 인증 요청 버튼 문구 관련 가이드가 추가됐습니다.
+
+# 2021/05/10
+* 신규 API가 추가됐습니다.
+  * 임의의 NFT resource 파일을 업로드할 수 있는 API가 추가됐습니다.
+* 카드 발행하기 API 요청에 다음 필드가 추가됐습니다.
+  * `animation_url` 필드에 동영상 주소를 설정할 수 있습니다.
+
+# 2021/03/08
+* 사명이 변경됐습니다.
+  * (주)그라운드원 -> (주)그라운드엑스
+* 사명 변경에 따라 이메일 주소가 변경됐습니다.
+  * klip-partners@ground1.io -> klip-partners@groundx.xyz
+
+# 2021/02/03
+* 특정 Klip 회원에게 발행 및 전송하기 API 응답 필드에 트랜잭션 해시가 추가됐습니다.
+* 카드 발행하기 API 요청에 다음 필드가 추가됐습니다.
+  * `secure` 필드에 카드 소유자만 볼 수 있는 속성을 설정할 수 있습니다.
+  * `status_url` 필드에 카드의 상태를 불러올 수 있는 외부 URL을 설정할 수 있습니다.
+  * `external_link` 필드에 Klip 외부로 연결되는 URL을 설정할 수 있습니다.
+* 튜토리얼 오타 수정.
+
+# 2021/01/12
+* 신규 API가 추가됐습니다.
+  * 트랜잭션 해시로 처리 결과를 확인할 수 있는 API가 추가됐습니다.
+  * 이번 달 현재까지 발행한 카드 개수를 조회할 수 있는 API가 추가됐습니다.
+* Introduction에 일부 잘못된 링크를 수정했습니다.
+
+# 2020/11/30
+* QR code 기반 App2App 처리 기능이 새로 추가됐습니다.
+  * PC 또는 물리적으로 떨어진 환경에서 App2App 실행이 가능합니다.
+  * 모바일 카메라앱 또는 Klip에서 QR code를 인식하여 App2App 요청을 처리하는 방식으로 동작합니다.
+* 에스크로 카드 전송 API가 새로 추가됐습니다.
+  * 파트너스 계정에 보유중인 카드를 에스크로 전송하면 카드 지급 링크가 생성됩니다.
+  * 해당 링크를 클릭하면 카드를 지급 받을 수 있습니다.
+
+# 2020/10/26
+* App2App API가 추가되었습니다.
+  * 외부 서비스에서 Klip 사용자 주소를 가져오는 기능을 제공합니다.
+  * 외부 서비스에서 Klip을 이용해 KLAY 및 대체 가능한 토큰(FT), 카드(NFT)를 전송하거나 스마트 컨트랙트를 실행하는 기능을 제공합니다.
+
+# 2020/08/26
+* Mint Card To User, Mint Card To Klip Member API로 카드를 발행할 때, 카드 메타데이터에 입력하는 Optional 필드가 추가되었습니다.
+  * `group_name`, `group_icon`, `hashtags`, `layout`, `qr_code`, `bar_code`
+  
+* Get Card Information By BApp, Get Card Information API의 Response 값이 아래와 같이 변경되었습니다.
+  * `bapps[i].cards.cards[i]` -> `bapps[i].cards[i]`
+  * `bapps[i].cards.next_cursor` -> `bapps[i].cards_next_cursor`
+  
+* Get Card Information API의 Response 값이 아래와 같이 변경되었습니다.
+  * `cards.cards[i]` -> `cards[i]`
+  * `cards.next_cursor` -> `next_cursor`
+  
+* Get Card Information API의 Request Parameter에 아래 Query Parameter가 추가되었습니다.
+  * `isAll`
+
+
+# 2020/07/31
+* Mint Card API 이름이 Mint Card To User API로 변경되었습니다.  
+  * 카드를 EOA를 가진 사용자(Klip 회원 또는 비회원)에게 발행합니다.  
+  * 발행 시 사용자 EOA를 사용합니다.  
+
+* Mint Card To Klip Member API가 새로 추가되었습니다.  
+  * 카드를 Klip 회원에게 발행합니다.  
+  * 발행 시 Klip 회원의 실명과 전화번호를 사용합니다.  
+
+* Send Card API 이름이 Send Card To User API로 변경되었습니다.  
+  * 카드를 EOA를 가진 사용자(Klip 회원 또는 비회원)에게 전송합니다.  
+  * 전송 시 사용자 EOA를 사용합니다.  
+
+* Send Card To Klip Member API가 새로 추가되었습니다.  
+  * 카드를 Klip 회원에게 전송합니다.  
+  * 전송 시 Klip 회원의 실명과 전화번호를 사용합니다.  
+
+* Send Card To User, Send Card To Klip Member API의 Response에서 `failCount` 변수명이 `fail_count`로 변경되었습니다.
+
+# 2020/07/16
+* Get Card Information By BApp API Response에서 `order_no` 변수명이 `nft_order_no`로 변경되었습니다.
+
+# 2020/06/16
+* Send Card API는 Request Body Parameter에서 `to_klip_id`를 더는 사용하지 않습니다.
+
+# 2020/05/28
+* [Klip 파트너스 회원사](https://partners.klipwallet.com/)들이 Klip에 로그인하고 카드(NFT)를 발행, 전송, 조회하기 위한 API입니다.

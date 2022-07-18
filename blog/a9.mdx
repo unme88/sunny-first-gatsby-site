@@ -1,0 +1,1606 @@
+---
+title: "test"
+date: "2021-01-01"
+---
+
+---
+description: '이 튜토리얼은 Klip 파트너 여러분이 API를 사용해 카드를 손쉽게 발행, 관리하도록 돕기 위해 작성된 개발자 가이드입니다.'
+---
+
+# Card Minting API Tutorial
+
+## 1. Klip Partners<a id="klip-partners"></a>
+
+### 1-1. 가입 신청과 승인 <a id="registration"></a>
+카드를 발행하려면 먼저 Klip Partners 사이트에 가입해야 합니다. 가입을 신청하면 Klip 운영진과 별도로 협의한 후 가입이 승인됩니다. 가입이 승인되면 가입 승인 확인 메일을 받으며 [Klip Partners](https://partners.klipwallet.com)에 로그인할 수 있습니다. 회원 가입에 관한 자세한 내용은 [Klip Partners](https://partners.klipwallet.com)을 확인하십시오.
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 1-2. 로그인 <a id="sign-in"></a>
+
+[Sign In](rest-api-card-minting.md#sign-in)으로 로그인 ID와 비밀번호\( `email`과 `password`\)를 [Klip Partners](https://partners.klipwallet.com)에 보내고 로그인을 요청합니다.
+
+ * `password`는 비밀번호를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+   * 비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자를 조합한 string 값입니다.  
+
+```bash
+//Klip Partners 로그인
+curl -X POST "https://api.klipwallet.com/v2/partner/auth" \
+-d '{"email":"ray.kim@groundx.xyz", "password":"C01069C9ABB6EA7DA49AE418A24BBEF3AD67170DDCD20AC7C76084A5A85E4057"}' \
+-H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.  
+
+```bash
+{
+  "email": "ray.kim@groundx.xyz",
+  "klaytn_address":0xdc6AE5861a73d852bd3cdD84a4BA7f598A5160F3,
+  "contract_address": "0xc94770007dda54cF92009BFF0dE90c06F603a09f",
+  "name": "Ray Kim",
+  "phone": "01077777777",
+  "service_name": "판타지월드레볼루션",
+  "access_token" : "eyJ0eXAiOiJKV1QiLCJhbGciOiJI...",
+  "status" : 10,
+  "mint_limit": 1000,
+  "mint_count": 1,
+}
+```
+
+[Klip Partners](https://partners.klipwallet.com)에 가입하면 [Klaytn](https://ko.docs.klaytn.com/klaytn) 블록체인상에 여러분의 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소와 카드를 발행할 스마트 컨트랙트가 생성됩니다. `klaytn_address`는 [Klaytn](https://ko.docs.klaytn.com/klaytn) 블록체인에 생성된 여러분의 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소이며 `contract_address`는 카드를 발행할 스마트 컨트랙트 주소\([SCA](https://ko.docs.klaytn.com/klaytn/design/accounts#smart-contract-accounts-scas)\) 주소입니다.
+
+{% hint style="info" %}
+로그인 시점으로부터 24시간 유효한 JWT 인증 토큰\(`access_token`\)을 받습니다. 이 토큰은 로그인 후 24시간이 지나면 만료되며 이 경우 재발급받아야 합니다.
+{% endhint %}  
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.  
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="406" %}
+```text
+"not found user info in db": 계정 정보가 존재하지 않습니다.
+```
+{% endtab %}
+
+{% tab title="426" %}
+```text
+"not yet approved": 아직 가입이 승인되지 않았습니다.
+```
+{% endtab %}
+
+{% tab title="4004" %}
+```text
+"invalid password": 비밀번호가 일치하지 않습니다.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+로그인할 수 없습니다.
+```
+{% endtab %}
+{% endtabs %}
+###    
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## 2. 카드 발행하기 <a id="mint-card"></a>
+
+### 2-1. 카드 이미지 업로드하기 <a id="upload-image"></a>
+
+카드 이미지는 카드가 Klip 사용자에게 보일 모양입니다. 카드를 발행하려면 이 카드 이미지를 먼저 업로드해야 합니다. [Upload Image](rest-api-card-minting.md#upload-image)로 카드 이미지 파일, 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 이미지 업로드를 요청합니다.  
+   
+[Mint Card To User](rest-api-card-minting.md#mint-card-to-user)로 카드를 발행하려면 Upload Image API로 먼저 카드 이미지를 업로드해야 합니다.  
+
+```text
+//Klip Partners에 카드 이미지 업로드
+curl -X POST "https://api.klipwallet.com/v2/wallet/image" \
+-F upload=@./imagefile.png \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: multipart/form-data"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{"image": "https://path_to_image/image.png"}
+```
+
+이미지 파일이 업로드되면 업로드된 이미지 파일 URL 주소를 위와 같이 받습니다.
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+이미지를 업로드하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 2-2. 특정 EOA에게 카드 발행하기 <a id="mint-card-to-user"></a>
+
+[Mint Card To User](rest-api-card-minting.md#mint-card-to-user)로 `mint_info.json` 파일, 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 카드 발행을 요청합니다. 업로드한 카드 이미지를 사용합니다. EOA를 가진 사용자라면 누구나 카드를 발행받을 수 있습니다.
+
+```text
+//카드 발행하기
+curl -X POST "https://api.klipwallet.com/v2/wallet/mint" \
+-d @./mint_info.json \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+`mint_info.json` 예시는 아래와 같습니다. 이 파일에는 카드 이미지 URL 주소와 카드 발행에 필요한 정보가 담겨 있습니다.
+
+```text
+//mint_info.json 파일 내용 예시
+{
+  "pin": "91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203",
+  "to_address": ["0x01ea07D1258c106FFD3197721a838F02408ea809",
+    "0xE2d12bE9E570AE58277d6872B001fE9dF94D1531",
+    "0xb1764B96da889Cc2F043025aa368517C80e86795"],
+  "contract_address": "0xbad6444e1f84af055c22281d4ac7d75bde2ddec8",
+  "name": "Magic Sword",
+  "description" : "게임 내에서 마법 속성을 띈 마검을 소환할 수 있습니다.",
+  "image": "https://path_to_image/image.png",
+  "animation_url": "https://path_to_video/video.mp4",
+  "background_color" : "#ae312e",
+  "sendable": true,
+  "send_friend_only": true,
+  "group_name": "Ground X Magic Game",
+  "group_icon": "https://path_to_image/image.png",
+  "hashtags": ["Game","groundX","Magic"],
+  "layout": "vertical",
+  "external_link": "https://path_to_ext_link",
+  "qr_code": "https://path_to_image/qr_image.png",
+  "bar_code": "https://path_to_image/bar_image.png",
+  "attributes" : [
+    {
+      "trait_type": "Sword", 
+      "value": "Iron Short Sword"
+    }, 
+    {
+      "trait_type": "Magic Type", 
+      "value": "Fire"
+    }, 
+    {
+      "trait_type": "Sword Level", 
+      "value": "5"
+    }, 
+    {
+      "trait_type": "Magic Level", 
+      "value": "2"
+    }
+  ],
+  "secure" : {
+    "bar_code" : "1234 ABCD 5678 EFGH 90IJ",
+    "qr_code" : "https://your-domain.com?key=1234",
+    "attributes" : [
+      {
+        "trait_type": "Sword",
+        "value": "Iron Short Sword"
+      },
+      {
+        "trait_type": "Magic Type",
+        "value": "Fire"
+      },
+      {
+        "trait_type": "Sword Level",
+        "value": "5"
+      },
+      {
+        "trait_type": "Magic Level",
+        "value": "2"
+      }
+    ]
+  },
+  "status_url" : "https://your-domain.com?key=1234"
+}
+```
+
+* `pin`은 핀 번호\(Klip Partners 회원 가입 시 입력하신 6자리 숫자 string 값\)를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.  
+  * 핀 번호는 6자리 숫자 string 값입니다.  
+* `to_address`는 카드를 발행받을 사용자 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소들이 담긴 배열입니다.  
+  * `to_address`에 원소 1개짜리 배열을 전달하면 1명에게만 발행합니다.  
+  * `to_address`에 넣을 수 있는 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소 개수는 API 호출 1회당 최대 200개입니다.  
+* `sendable`이 TRUE이면 카드를 발행받은 사람은 발행받은 카드를 Klip에서 다른 사람에게 전송 가능합니다.  
+* `send_friend_only`가 TRUE이면 카드를 발행받은 사람은 발행받은 카드를 Klip에서 카카오톡 친구에게만 전송 가능합니다.  
+* `hashtags` 배열의 원소 개수는 최대 10개입니다. 각 원소는 최대 100글자입니다.  
+* `external_link`를 지정하면 Klip 외부 브라우저로 연결되는 URL 주소를 넣을 수 있습니다. 최대 255자까지 가능합니다.
+* `qr_code`로 사용할 이미지는 가로 400px 이상이고 상하좌우 여백이 없는 것을 권장합니다.  
+* `bar_code`로 사용할 이미지는 가로 400px 이상이고 상하좌우 여백이 없는 것을 권장합니다.  
+* `attributes`는 카드의 고유한 속성을 `trait_type/value` 형태로 가지는 `object`들의 배열입니다.  
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+  "hash": "0x2d26f602cfbb4c662931592bf2c4ee18d29f09683be5b9e8d589ff935fca0b97"
+}
+```
+
+카드가 정상 발행되었다면 카드를 발행한 스마트 컨트랙트 트랜잭션 해시값을 위와 같이 받습니다. 전달받은 트랜잭션 해시값을 [Klaytnscope](https://scope.klaytn.com/)에서 조회할 수 있습니다. 이 해시값을 조회하면 카드 발행 트랜잭션이 정상 실행되었는지 확인할 수 있습니다.
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+정상적인 카드 발행에 실패했습니다.
+일부 카드는 발행되었을 수 있으니 ‘보유 카드 목록’ 에서 보유 목록을 확인하십시오.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 2-3. 특정 Klip 회원에게 카드 발행하기 <a id="mint-card-to-klip-member"></a>
+
+[Mint Card To Klip Member](rest-api-card-minting.md#mint-card-to-klip-member)로 `mint_info.json` 파일, 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 카드 발행을 요청합니다. Klip 회원의 실명과 전화번호를 사용하여 Klip 회원에게만 카드를 발행합니다.
+
+```text
+//카드 발행하기
+curl -X POST "https://api.klipwallet.com/v2/wallet/mint/person" \
+-d @./mint_info.json \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+`mint_info.json` 예시는 아래와 같습니다. 이 파일에는 카드 이미지 URL 주소와 카드 발행에 필요한 정보가 담겨 있습니다.
+
+```text
+//mint_info.json 파일 내용 예시
+{
+  "pin": "91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203",
+  "to_person": [["홍길동", "010-1111-2222"], ["김춘향", "010-3333-4444"]]
+  "contract_address": "0xbad6444e1f84af055c22281d4ac7d75bde2ddec8",
+  "name": "Magic Sword",
+  "description" : "Summons a magic sword that has magical properties and effects in the game.",
+  "image": "https://path_to_image/image.png",
+  "animation_url": "https://path_to_video/video.mp4",
+  "background_color" : "#ae312e",
+  "sendable": true,
+  "send_friend_only": true,
+  "group_name": "Ground X Magic Game",
+  "group_icon": "https://path_to_image/image.png",
+  "hashtags": ["Game","groundX","Magic"],
+  "layout": "vertical",
+  "external_link": "https://path_to_ext_link",
+  "qr_code": "https://path_to_image/image.png",
+  "bar_code": "https://path_to_image/bar_image.png",
+  "attributes" : [
+    {
+      "trait_type": "Sword", 
+      "value": "Iron Short Sword"
+    }, 
+    {
+      "trait_type": "Magic Type", 
+      "value": "Fire"
+    }, 
+    {
+      "trait_type": "Sword Level", 
+      "value": "5"
+    }, 
+    {
+      "trait_type": "Magic Level", 
+      "value": "2"
+    }
+  ],
+  "secure" : {
+    "bar_code" : "1234 ABCD 5678 EFGH 90IJ",
+    "qr_code" : "https://your-domain.com?key=1234",
+    "attributes" : [
+      {
+        "trait_type": "Sword",
+        "value": "Iron Short Sword"
+      },
+      {
+        "trait_type": "Magic Type",
+        "value": "Fire"
+      },
+      {
+        "trait_type": "Sword Level",
+        "value": "5"
+      },
+      {
+        "trait_type": "Magic Level",
+        "value": "2"
+      }
+    ]
+  },
+  "status_url" : "https://your-domain.com?key=1234"
+}
+```
+
+* `pin`은 핀 번호\(Klip Partners 회원 가입 시 입력하신 6자리 숫자 string 값\)를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.  
+  * 핀 번호는 6자리 숫자 string 값입니다.  
+* `to_person`은 카드를 발행받을 사용자 \[실명, 전화번호\] 배열들이 담긴 2차원 배열입니다.  
+  * `to_person`에 원소 1개짜리 배열을 전달하면 1명에게만 발행합니다.
+  * `to_person`에 넣을 수 있는 [실명, 전화번호] 개수는 API 호출 1회당 최대 200개입니다.  
+  * `to_person` 파라미터에 전달한 실명과 전화번호로 가입한 Klip 회원이 없다면 발행에 실패합니다.  
+* `sendable`이 TRUE이면 카드를 발행받은 사람은 발행받은 카드를 Klip에서 다른 사람에게 전송 가능합니다.  
+* `send_friend_only`가 TRUE이면 카드를 발행받은 사람은 발행받은 카드를 Klip에서 카카오톡 친구에게만 전송 가능합니다.  
+* `hashtags` 배열의 원소 개수는 최대 10개입니다. 각 원소는 최대 100글자입니다.  
+* `external_link`를 지정하면 Klip 외부 브라우저로 연결되는 URL 주소를 넣을 수 있습니다. 최대 255자까지 가능합니다.
+* `qr_code`로 사용할 이미지는 가로 400px 이상이고 상하좌우 여백이 없는 것을 권장합니다.  
+* `bar_code`로 사용할 이미지는 가로 400px 이상이고 상하좌우 여백이 없는 것을 권장합니다.  
+* `attributes`는 카드의 고유한 속성을 `trait_type/value` 형태로 가지는 `object`들의 배열입니다.  
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+  "hash": "0x2d26f602cfbb4c662931592bf2c4ee18d29f09683be5b9e8d589ff935fca0b97",
+  "result": [["홍길동", "010-1111-2222", "success", ""], ["김춘향", "010-3333-4444", "fail", "phone number does not exist"], ...]
+}
+```
+
+카드가 정상 발행되었다면 카드를 발행한 스마트 컨트랙트 트랜잭션 전송 결과 및 트랜잭션 해시를 받습니다.
+`to_person`에 입력한 회원 중 1명이라도 카드를 정상적으로 발행받았다면 요청이 정상 처리된 것으로 나타납니다.
+
+{% hint style="info" %}
+위 결과에서 "홍길동" 회원은 해당 실명과 전화번호로 Klip에 가입한 정보가 존재하므로 카드를 발행받습니다.  
+위 결과에서 "김춘향" 회원은 해당 전화번호로 Klip에 가입한 정보가 존재하지 않으므로 카드를 발행받지 못합니다.
+{% endhint %}
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+정상적인 카드 발행에 실패했습니다.
+일부 카드는 발행되었을 수 있으니 ‘보유 카드 목록’ 에서 보유 목록을 확인하십시오.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 2-4. 카드 동영상 파일 업로드하기 <a id="upload-nftresource"></a>
+
+카드를 발행할 때 `animation_url` 필드를 설정하기 위해서는 카드 동영상을 먼저 업로드해야 합니다. [Upload NFT Resource](rest-api-card-minting.md#upload-nftresource)로 카드 동영상 파일, 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 동영상 업로드를 요청합니다.  
+
+```text
+//Klip Partners에 카드 동영상 업로드
+curl -X POST "https://api.klipwallet.com/v2/wallet/nftResource" \
+-F upload=@./video.mp4 \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: multipart/form-data"
+```
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{"url": "https://path_to_video/video.mp4"}
+```
+
+파일이 업로드되면 업로드된 파일 URL을 위와 같이 받습니다.
+
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+파일을 업로드하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## 3. 카드 조회하기 <a id="query-card"></a>
+
+### 3-1. BApp과 카드 정보 함께 조회하기 <a id="get-card-information-by-bapp"></a> 
+
+카드를 발행했다면 발행한 카드를 포함해 소유한 카드 정보를 BApp 정보와 함께 조회할 수 있습니다. [Get Card Information by BApp](rest-api-card-minting.md#get-card-information-by-bapp)으로 로그인 시 받은 `access_token`을 보내고 BApp별 카드 정보 조회를 요청합니다.
+
+```text
+//Get Card Information By BApp
+curl "https://api.klipwallet.com/v2/wallet/bapp" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+//BApp 목록과 BApp별 카드 정보 예시
+{
+    "bapps": [
+        {
+            "id": 2,
+            "name": "bapp2",
+            "bapp_img": "/img/bapp-icon2.svg",
+            "category_id": 2,
+            "nft_order_no": 1,
+            "summary": "summary",
+            "card_count": 10,
+            "nft_id": 52,
+            "cards": [
+                    {
+                        "created_at": 1580300503,
+                        "updated_at": 1580300503,
+                        "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                        "sender": "0x0000000000000000000000000000000000000000",
+                        "card_id": 18,
+                        "card_uri": "https://...",
+                        "transaction_hash": "0x8754f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+                    },
+                    {
+                        "created_at": 1580300504,
+                        "updated_at": 1580300504,
+                        "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                        "sender": "0x0000000000000000000000000000000000000000",
+                        "card_id": 19,
+                        "card_uri": "https://...",
+                        "transaction_hash": "0x8814f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+                    },
+                    {
+                        "created_at": 1580300505,
+                        "updated_at": 1580300505,
+                        "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                        "sender": "0x0000000000000000000000000000000000000000",
+                        "card_id": 20,
+                        "card_uri": "https://...",
+                        "transaction_hash": "0x9254f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+                    },
+                ],
+            "cards_next_cursor": ""
+        },
+        {
+            "id": 3,
+            "name": "bapp3",
+            "bapp_img": "/img/bapp-icon3.svg",
+            "category_id": 2,
+            "nft_order_no": 2,
+            "summary": "summary",
+            "card_count": 10,
+            "nft_id": 55,
+            "cards": [
+                    {
+                        "created_at": 1580300511,
+                        "updated_at": 1580300511,
+                        "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                        "sender": "0x0000000000000000000000000000000000000000",
+                        "card_id": 5,
+                        "card_uri": "https://...",
+                        "transaction_hash": "0x1a54f10f73468ea85c84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+                    },
+
+                ],
+            "cards_next_cursor": ""
+        },
+    ],
+    "next_cursor": ""
+}
+```
+
+카드 정보가 정상 조회되었다면 계정이 쓰는 모든 BApp 목록과 BApp별 카드 정보를 받습니다.
+
+* `bapps`에서 **bapp**은 Klip 파트너사가 서비스하는 BApp입니다.  
+* `cards`에서 **card**는 이 BApp에서 쓰이는 Klip 카드입니다. BApp에는 카드 1종류가 들어있습니다.  
+* `nft_id`란 이 **card**를 블록체인 상에 만드는 스마트 컨트랙트의 ID입니다.  
+* **nft**와 **bapp**은 항상 1:1로 맵핑됩니다.  
+* `card_uri`는 카드 메타데이터가 담긴 JSON 파일이 있는 URL입니다.  
+  * 카드 메타데이터는 `name`, `description`, `image`, `background_color`, `attributes` 등 카드를 발행할 때 정의한 카드 기본 정보입니다.  
+
+1회 요청에 BApp 정보를 최대 100개까지 받습니다. 불러올 BApp 개수가 100개 이상이면 다음 BApp 정보를 불러올 수 있는 페이지네이션 커서값인 `bapps.next_cursor`로 나머지 카드 정보를 받습니다.  
+나머지 BApp 정보를 받으려면 Query 파라미터 `cursor`에 이전 호출에서 받은 `bapps.next_cursor`를 넣고 API를 다시 호출합니다.  
+   
+또 1회 요청에 BApp별로 BApp에서 쓰이는 카드 정보를 최대 100개까지 받습니다. BApp별로 카드가 100개를 초과할 경우 나머지 카드 정보를 받으려면, [Get Card Information](rest-api-card-minting.md#get-card-information) API로 각 카드 정보를 확인해야 합니다.  
+   
+위 API 응답값을 보면 발행자는 BApp 2개를 사용하며, 첫 번째 BApp에는 카드에 3개가, 두 번째 BApp에는 카드 1개가 있습니다.  
+`bapps[0].cards` 배열을 보면 카드 생성/업데이트 시간, 카드 소유자 주소, 카드를 보내준 사람 주소, 카드 발행 트랜잭션 해시 등 각 카드에 관한 상세 정보를 확인할 수 있습니다.  
+   
+한 번에 조회할 BApp 개수가 100개를 초과한다면 1회 호출 시 BApp 100개 정보만 받고 `bapps.next_cursor`값을 받습니다.  
+나머지 BApp 정보를 조회하려면 `bapps.next_cursor`값을 Query 파라미터 `cursor`에 전달하고 API를 다시 호출해야 합니다.  
+   
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+BApp별로 보유한 카드 목록을 조회하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 3-2. 카드 정보만 조회하기 <a id="get-card-information"></a> 
+
+각 BApp은 카드를 생성하는 스마트 컨트랙트 ID인 `nft_id`가 있습니다. [Get Card Information](rest-api-card-minting.md#get-card-information)으로 Path 파라미터 `nft_id`, 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 BApp별로 카드 정보를 조회합니다.
+
+```text
+//Get Card Information - '52' is the `nft_id` of our interest.
+curl "https://api.klipwallet.com/v2/wallet/nft/52" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+//카드 정보를 받은 예시.
+{
+    "name": "conan",
+    "symbol_img": "",
+    "cards": [
+            {
+                "created_at": 1580300501,
+                "updated_at": 1580300501,
+                "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                "sender": "0x0000000000000000000000000000000000000000",
+                "card_id": 1,
+                "card_uri": "https://...",
+                "transaction_hash": "0x8754f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+            },
+            ...
+            {
+                "created_at": 1580300502,
+                "updated_at": 1580300502,
+                "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                "sender": "0x0000000000000000000000000000000000000000",
+                "card_id": 100,
+                "card_uri": "https://...",
+                "transaction_hash": "0x9254f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+            },
+
+        ],
+    "next_cursor": "mrzedXOE9OeEorkAvwQXB7JdVg4LP1Rzze2kLQFxLU4C8iMOhOVulzIr5iesZoie9uv9h87UNXsWCKdhqYszXFWLsYYI7h125Rx8p56qlMKaZ20YbNW3zDGmNBJKM1wL",
+}
+```
+
+카드 정보가 정상 조회되었다면 계정이 이 BApp에서 소유한 카드 목록과 정보를 받습니다.  
+   
+* `cards`에서 **card**는 이 bapp에서 쓰이는 Klip 카드입니다. bapp에는 카드 1종류가 들어있습니다.  
+* Query 파라미터로 `cursor` 또는 `isAll` 둘 중 하나만 사용해야 합니다(`isAll`이 `false`이면 `cursor`를 사용할 수 있습니다).  
+* `cursor`를 사용하면 Pagination을 사용합니다.  
+  * 1회 요청에 최대 카드 100개의 정보를 받습니다.  
+  * 정보를 불러울 카드가 100개를 초과 시 다음 카드 정보를 불러올 수 있는 커서값인 `next_cursor`로 나머지 카드 정보를 받습니다.  
+  * 나머지 카드 정보를 받으려면 `cursor`에 이전 호출에서 받은 `next_cursor`를 넣고 API를 다시 호출합니다.  
+* `nft_id`는 [Get Card Information by BApp](rest-api-card-minting.md#get-card-information-by-bapp) API로 받은 BApp 정보에서 확인합니다.  
+   
+위 예시에서 `cards.next_cursor`값이 존재하므로 이 계정은 **conan** 카드를 100개 이상 가지고 있습니다.  
+한 번에 조회할 카드 개수가 100개를 초과한다면 1회 호출 시 카드 100개 정보만 받고 `cards.next_cursor`값을 받습니다.  
+나머지 카드 정보를 조회하려면 `cards.next_cursor`값을 Query 파라미터 `cursor`에 전달하고 API를 다시 호출해야 합니다.  
+   
+예를 들어, 정보를 불러올 카드 개수가 150개라면, 먼저 API를 호출하여 카드 100개의 정보와 `cards.next_cursor`값을 받습니다.  
+그리고 동일한 API를 다시 호출할 때 `cards.next_cursor`값을 Query 파라미터 `cursor`로 사용하면 나머지 50개의 정보를 받습니다.  
+   
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 정보를 조회하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+[Get Card Information](rest-api-card-minting.md#get-card-information)으로 `cards.next_cursor`값과 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 나머지 카드 정보 조회를 요청합니다.
+
+```text
+//Get Card Information, cards.next_cursor 값을 cursor로 사용
+curl "https://api.klipwallet.com/v2/wallet/nft/52?cursor=mrzedXOE9OeEorkAvwQXB7JdVg4LP1Rzze2kLQFxLU4C8iMOhOVulzIr5iesZoie9uv9h87UNXsWCKdhqYszXFWLsYYI7h125Rx8p56qlMKaZ20YbNW3zDGmNBJKM1wL" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+//cursor를 사용해 나머지 50개 카드 정보를 받은 예시.
+{
+    "name": "conan",
+    "symbol_img": "",
+    "cards": [
+          {
+              "created_at": 1580300503,
+              "updated_at": 1580300503,
+              "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+              "sender": "0x0000000000000000000000000000000000000000",
+              "card_id": 101,
+              "card_uri": "https://...",
+              "transaction_hash": "0x8754f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+          },
+          ...
+          {
+              "created_at": 1580300515,
+              "updated_at": 1580300515,
+              "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+              "sender": "0x0000000000000000000000000000000000000000",
+              "card_id": 150,
+              "card_uri": "https://...",
+              "transaction_hash": "0x9254f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+          },
+
+      ],
+    "next_cursor": "",
+}
+```
+
+{% hint style="info" %}
+`cards` 배열의 상세 정보는 [Get Card Information by BApp](rest-api-card-minting.md#get-card-information-by-bapp)으로 받는`bapps[i].cards`배열 정보와 동일합니다.
+{% endhint %}
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 정보를 조회하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+ 
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 3-3. 카드가 100개를 초과할 때 나머지 카드 정보 조회하기 <a id="get-extra-card-information"></a>
+
+[Get Card Information By BApp](rest-api-card-minting.md#get-card-information-by-bapp)은 1회 요청에 각 BApp당 카드 정보를 최대 100개까지만 반환합니다. BApp별 카드가 100개를 초과할 때 나머지 카드 정보까지 받으려면, [Get Card Information](rest-api-card-minting.md#get-card-information)을 따로 호출해야 합니다. 101번째 카드부터 조회하려면 `bapps[i].cards_next_cursor`를 Query 파라미터 `cursor`로 사용해 [Get Card Information](rest-api-card-minting.md#get-card-information)을 호출합니다.
+
+예를 들어, BApp을 2개 가지고 있고 BApp1에 카드 150개, BApp2에 카드 200개가 있을 때 [Get Card Information By BApp](rest-api-card-minting.md#get-card-information-by-bapp)을 호출하면 BApp1 카드 100개, BApp2 카드 100개의 정보만을 받습니다. [Get Card Information By BApp](rest-api-card-minting.md#get-card-information-by-bapp)으로 로그인 시 받은 `access_token`을 보내고 BApp별 카드 정보 조회를 요청해야 합니다.
+
+```text
+//Get Card Information By BApp
+curl "https://api.klipwallet.com/v2/wallet/bapp" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+//BApp1은 카드 150개, BApp2은 카드 200개 보유 시 Get Card Information By BApp 결과 예시
+{
+    "bapps": [
+        {
+            "id": 1,
+            "name": "bapp1",
+            "bapp_img": "/img/bapp-icon1.svg",
+            "category_id": 2,
+            "nft_order_no": 1,
+            "summary": "summary",
+            "card_count": 150,
+            "nft_id": 60,
+            "cards": [
+                    {
+                        "created_at": 1580300503,
+                        "updated_at": 1580300503,
+                        "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                        "sender": "0x0000000000000000000000000000000000000000",
+                        "card_id": 1,
+                        "card_uri": "https://...",
+                        "transaction_hash": "0x8754f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+                    },
+
+                    ...
+
+                    {
+                        "created_at": 1580300505,
+                        "updated_at": 1580300505,
+                        "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                        "sender": "0x0000000000000000000000000000000000000000",
+                        "card_id": 100,
+                        "card_uri": "https://...",
+                        "transaction_hash": "0x9254f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+                    },
+                ],
+            "cards_next_cursor": "gKvkL1lPYv1P93dpEWgaBzrq7XZ4LwjpgNe39AH9Dt3C1iWkubJtGotkrsQs4qSwdIJMHr3HKrhlCqJupwToWCd0T55IKhLzARM60N5xAGJQbKomeDkVl2O8WxMB0GQ9"
+        },
+        {
+            "id": 2,
+            "name": "bapp2",
+            "bapp_img": "/img/bapp-icon2.svg",
+            "category_id": 2,
+            "nft_order_no": 2,
+            "summary": "summary",
+            "card_count": 200,
+            "nft_id": 61,
+            "cards": [
+                    {
+                        "created_at": 1580300511,
+                        "updated_at": 1580300511,
+                        "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                        "sender": "0x0000000000000000000000000000000000000000",
+                        "card_id": 1,
+                        "card_uri": "https://...",
+                        "transaction_hash": "0x1a54f10f73468ea85c84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+                    },
+
+                    ...
+
+                    {
+                        "created_at": 1580300515,
+                        "updated_at": 1580300515,
+                        "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                        "sender": "0x0000000000000000000000000000000000000000",
+                        "card_id": 100,
+                        "card_uri": "https://...",
+                        "transaction_hash": "0x3t54f10f73468ea85c84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+                    },
+
+                ],
+            "cards_next_cursor": "Xrzed2Ot9LeEorkAvwQXB7JdVg4LP1Rzze2kLQFxLU4C8iMOhOVulzIr5iesZoie9uv9h87UNXsWCKdhqYszXFWLsYYI7h125Rx8p56qlMKaZ20YbNW3zDGmNBJKM1wL"
+        },
+    ],
+    "next_cursor": ""
+}
+```
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+BApp별로 보유한 카드 목록을 조회하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+BApp1 나머지 50개 카드 정보를 받으려면 Query 파라미터 `cursor`에 `bapps[0].cards_next_cursor`값인 `gKvkL1lPYv1P93dpE...`를 전달해 [Get Card Information](rest-api-card-minting.md#get-card-information)을 호출해야 합니다.
+
+[Get Card Information](rest-api-card-minting.md#get-card-information)으로 `gKvkL1lPYv1P93dpE...`과 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 BApp1 나머지 카드 50개 정보 수신을 요청합니다.
+
+```text
+//BApp 1 나머지 카드 정보 수신 예시
+//Get Card Information, bapps[0].cards_next_cursor값을 cursor로 사용
+curl "https://api.klipwallet.com/v2/wallet/nft/60?cursor=gKvkL1lPYv1P93dpEWgaBzrq7XZ4LwjpgNe39AH9Dt3C1iWkubJtGotkrsQs4qSwdIJMHr3HKrhlCqJupwToWCd0T55IKhLzARM60N5xAGJQbKomeDkVl2O8WxMB0GQ9" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+//cursor를 사용해 나머지 50개 카드 정보를 받은 예시.
+{
+    "name": "ray1",
+    "symbol_img": "",
+    "cards": [
+            {
+                "created_at": 1580300503,
+                "updated_at": 1580300503,
+                "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                "sender": "0x0000000000000000000000000000000000000000",
+                "card_id": 101,
+                "card_uri": "https://...",
+                "transaction_hash": "0x9e54f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+            },
+            ...
+            {
+                "created_at": 1580300515,
+                "updated_at": 1580300515,
+                "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                "sender": "0x0000000000000000000000000000000000000000",
+                "card_id": 150,
+                "card_uri": "https://...",
+                "transaction_hash": "0x92d4f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+            },
+
+        ],
+    "next_cursor": "",
+}
+```
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 정보를 조회하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+BApp2 나머지 카드 100개 정보를 받으려면 Query 파라미터 `cursor`에 `bapps[1].cards_next_cursor`값인 `Xrzed2Ot9LeEor...`을 전달해 [Get Card Information](rest-api-card-minting.md#get-card-information)을 호출해야 합니다. [Get Card Information](rest-api-card-minting.md#get-card-information)으로 `Xrzed2Ot9LeEor...`과 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 BApp2 나머지 카드 100개 정보 수신을 요청합니다.
+
+```text
+//BApp 2 나머지 카드 정보 수신 예시
+//Get Card Information, bapps[1].cards_next_cursor값을 cursor로 사용
+curl "https://api.klipwallet.com/v2/wallet/nft/61?cursor=Xrzed2Ot9LeEorkAvwQXB7JdVg4LP1Rzze2kLQFxLU4C8iMOhOVulzIr5iesZoie9uv9h87UNXsWCKdhqYszXFWLsYYI7h125Rx8p56qlMKaZ20YbNW3zDGmNBJKM1wL" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+//cursor를 사용해 나머지 100개 카드 정보를 받은 예시.
+{
+    "name": "ray2",
+    "symbol_img": "",
+    "cards": [
+            {
+                "created_at": 1580300505,
+                "updated_at": 1580300505,
+                "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                "sender": "0x0000000000000000000000000000000000000000",
+                "card_id": 101,
+                "card_uri": "https://...",
+                "transaction_hash": "0x8754f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+            },
+            ...
+            {
+                "created_at": 1580300520,
+                "updated_at": 1580300520,
+                "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+                "sender": "0x0000000000000000000000000000000000000000",
+                "card_id": 200,
+                "card_uri": "https://...",
+                "transaction_hash": "0x9254f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+            },
+
+        ],
+    "next_cursor": "",
+}
+```
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 정보를 조회하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 3-4. 카드 개수에 관계없이 한 번에 조회하기 <a id="get-all-card-information"></a>
+
+페이지네이션으로 카드 정보를 100개씩 확인하지 않고 한 번에 모든 카드 정보를 받으려면 [Get Card Information](rest-api-card-minting.md#get-card-information)으로 Query 파라미터 `isAll`, Path 파라미터 `nft_id`, 로그인 시 받은 `access_token`을 [Klip Partners](https://partners.klipwallet.com)에 보내고 모든 카드 정보를 요청합니다.
+
+```text
+//Get All Card Information - '52' is the `nft_id` of our interest.
+curl "https://api.klipwallet.com/v2/wallet/nft/52?isAll=true" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+//카드 정보를 받은 예시.
+{
+    "name": "conan",
+    "symbol_img": "",
+    "cards": [
+        {
+            "created_at": 1580300501,
+            "updated_at": 1580300501,
+            "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+            "sender": "0x0000000000000000000000000000000000000000",
+            "card_id": 1,
+            "card_uri": "https://...",
+            "transaction_hash": "0x8754f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+        },
+        ...
+        {
+            "created_at": 1580300502,
+            "updated_at": 1580300502,
+            "owner": "0xa3b7aa3a3c8a08bd22f77932368e2043e7ffe263",
+            "sender": "0x0000000000000000000000000000000000000000",
+            "card_id": 100,
+            "card_uri": "https://...",
+            "transaction_hash": "0x9254f10f73468ea85e84d9e29c2a864fc574c1e57675bfc70b5459d82477a91f"
+        },
+
+    ],
+    "next_cursor": "",
+}
+```
+
+카드 정보가 정상 조회되었다면 계정이 이 BApp에서 쓰는 모든 카드 목록과 정보를 받습니다.  
+   
+* Query 파라미터로 `cursor` 또는 `isAll` 둘 중 하나만 사용해야 합니다(`isAll`이 `false`이면 `cursor`를 사용할 수 있습니다).  
+   
+{% hint style="info" %}
+`cards` 배열의 상세 정보는 [Get Card Information by BApp](rest-api-card-minting.md#get-card-information-by-bapp)으로 받는`bapps[i].cards`배열 정보와 동일합니다.
+{% endhint %}
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 정보를 조회하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## 4. 카드 전송하기 <a id="send-card"></a>
+### 4-1. 특정 EOA에게 전송하기 <a id="send-card-to-user"></a>
+
+[Send Card To User](rest-api-card-minting.md#send-card-to-user)로 [Klip Partners](https://partners.klipwallet.com)에 로그인 시 받은 `access_token`, `send_info.json` 파일, 전송할 BApp 카드의 `nft_id`와 `card_id`\(Path 파라미터\)를 보내고 현재 계정 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소에 있는 카드를 다른 사람의 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소로 전송하도록 요청합니다.
+
+EOA를 가진 사용자라면 누구나 카드를 전송받을 수 있습니다.
+
+```text
+curl -X POST "https://api.klipwallet.com/v2/wallet/nft/50/1/send" \
+-d @./send_info.json \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+`send_info.json` 파일 예시는 아래와 같습니다.
+
+```text
+//게임 아이템 카드인 마법 검 카드를 보내기 위한 send_info.json 파일 내용 예시
+{
+    "pin": "91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203",
+    "to_address": "0xb1764B96da889Cc2F043025aa368517C80e86795",
+    "card_name": "Magic Sword"
+}
+```
+
+이 파일에는 카드 이름, `pin`, 카드를 받는 사람의 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소가 담겨 있습니다.  
+
+* `pin`은 핀 번호\(Klip Partners 회원 가입 시 입력하신 6자리 숫자 string 값\)를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.  
+  * 핀 번호는 6자리 숫자 string 값입니다.  
+    
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{ to_address: "0xb1764B96da889Cc2F043025aa368517C80e86795",
+  fail_count: 0,
+  tx_hash: "0x7cf09602cebb4c662931592bf2c4ee18d29f09683be5b9e8d589ff935fca0b97" }
+```
+
+전송에 성공하면 카드 수신자 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소, 전송 실패 횟수, 카드를 전송한 트랜잭션 해시값을 받습니다. 전송에 성공하면 `fail_count` 0을 받습니다.
+
+{% hint style="info" %}
+카드를 보내면 Klip 회원인 카드 수신자는 알림톡을 받습니다. 전송자는 알림톡을 받지 않습니다. Klip 사용자에게 카드를 전송 시 `card_name`을 입력해야 받는 사람에게 카드 이름이 정상 표시됩니다.
+{% endhint %}
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 전송에 실패했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 4-2. 특정 Klip 회원에게 전송하기 <a id="send-card-to-klip-member"></a>
+
+[Send Card To Klip Member](rest-api-card-minting.md#send-card-to-klip-member)로 [Klip Partners](https://partners.klipwallet.com)에 로그인 시 받은 `access_token`, `send_info.json` 파일, 전송할 BApp 카드의 `nft_id`와 `card_id`\(Path 파라미터\)를 보내고 현재 계정 [EOA](https://ko.docs.klaytn.com/klaytn/design/accounts#externally-owned-accounts-eoas) 주소에 있는 카드를 다른 사람에게 전송하도록 요청합니다.
+
+Klip 회원의 실명과 전화번호를 사용하여 Klip 회원에게만 카드를 전송합니다.
+
+```text
+curl -X POST "https://api.klipwallet.com/v2/wallet/nft/50/1/send/person" \
+-d @./send_info.json \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+`send_info.json` 파일 예시는 아래와 같습니다.
+
+```text
+//게임 아이템 카드인 마법 검 카드를 보내기 위한 send_info.json 파일 내용 예시
+{
+    "pin": "91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203",
+    "to_person": ["홍길동", "010-1111-2222"]
+    "card_name": "Magic Sword"
+}
+```
+
+이 파일에는 카드 이름, `pin`, 카드를 받는 사람이 Klip 회원에 가입 시 사용한 실명과 전화번호가 담겨 있습니다.  
+
+* `pin`은 핀 번호\(Klip Partners 회원 가입 시 입력하신 6자리 숫자 string 값\)를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.  
+  * 핀 번호는 6자리 숫자 string 값입니다.  
+* `to_person` 파라미터에 전달한 실명과 전화번호로 가입한 Klip 회원이 없다면 전송에 실패합니다.  
+    
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{fail_count: 0, tx_hash: "0x2d26f602cfbb4c662931592bf2c4ee18d29f09683be5b9e8d589ff935fca0b97"}
+```
+
+전송에 성공하면 `fail_count` 0을 받습니다.
+
+{% hint style="info" %}
+카드를 보내면 Klip 회원인 카드 수신자는 알림톡을 받습니다. 전송자는 알림톡을 받지 않습니다. Klip 사용자에게 카드를 전송 시 `card_name`을 입력해야 받는 사람에게 카드 이름이 정상 표시됩니다.
+{% endhint %}
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 전송에 실패했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## 5. 에스크로 <a id="escrow"></a>
+### 5-1. 에스크로 사용 동의 <a id="approve-escrow"></a>
+
+에스크로 기능을 사용하기 위해서는 카드 발급을 위한 컨트랙트에서 에스크로 컨트랙트를 승인하는 과정이 필요합니다. 사용 동의는 한 번만 수행하면 되며 이후에는 다시 수행할 필요가 없습니다.
+
+```text
+curl -X POST "https://api.klipwallet.com/v2/escrow/approve" \
+-d @./approve_info.json \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+`approve.json` 파일 예시는 아래와 같습니다.
+
+```text
+{
+    "pin": "91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203",
+    "contract_address": "0x6E3571F451fc960Ea69b532006A2c8683fF8922F"
+}
+```
+
+이 파일에는 `pin`, `contract_address`는 카드를 발행한 스마트 컨트랙트 주소\([SCA](https://ko.docs.klaytn.com/klaytn/design/accounts#smart-contract-accounts-scas)\)가 들어갑니다.
+
+* `pin`은 핀 번호\(Klip Partners 회원 가입 시 입력하신 6자리 숫자 string 값\)를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+    "tx_hash":"0x831e207b0b951127646b8f7d7eded55903cecb29fe794e17a2d93f457b7158a4",
+    "fail_count":0,
+}
+```
+
+에스크로 생성에 성공하면 트랜잭션 해시값을 받습니다. 만약 `pin` 확인에 실패한 경우 `fail_count`에 0보다 큰 값을 받습니다.
+
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 전송에 실패했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 5-2. 에스크로 사용 동의 여부 조회 <a id="get-approve-escrow"></a>
+
+에스크로 사용 동의 여부를 조회할 수 있습니다.
+
+```text
+curl -X GET "https://api.klipwallet.com/v2/escrow/approve?contract_address=0x6E3571F451fc960Ea69b532006A2c8683fF8922F" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+    "approve":true
+}
+```
+
+에스크로 생성에 성공하면 `approve` 필드에 `true` 값을 받습니다.
+
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 전송에 실패했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 5-3. 에스크로 전송 링크 생성 <a id="create-escrow"></a>
+
+에스크로 전송은 Klip 회원에게 카드를 바로 전송하지 않고 카드 지급 링크를 통해서 전송하는 기능입니다. 에스크로 전송 기능을 활용하기 위해서는 먼저 카드 지급 링크 생성 API를 호출해야합니다. 기본적으로 보유한 카드에 한하여 에스크로 생성을 요청할 수 있습니다. 에크스로 생성 후 해당 카드는 더 이상 카드 보유 목록에서 조회되지 않습니다.
+
+```text
+curl -X POST "https://api.klipwallet.com/v2/escrow" \
+-d @./escrow_info.json \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+`escrow_info.json` 파일 예시는 아래와 같습니다.
+
+```text
+{
+    "pin": "91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203",
+    "contract_address": "0x6E3571F451fc960Ea69b532006A2c8683fF8922F"
+    "card_ids": [15277, 15279],
+}
+```
+
+이 파일에는 `pin`, `contract_address`는 카드를 발행한 스마트 컨트랙트 주소\([SCA](https://ko.docs.klaytn.com/klaytn/design/accounts#smart-contract-accounts-scas)\), 에스크로 전송할 `card_id`의 배열인 `card_ids`가 들어갑니다.
+
+* `pin`은 핀 번호\(Klip Partners 회원 가입 시 입력하신 6자리 숫자 string 값\)를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+    "tx_hash":"0x5082643fc9799badeea30d243e3c5aba46dfd0eedf623f6698c8f30c36618c6c",
+    "fail_count":0,
+    "claim_links": ["https://klipwallet.com/?target=/claimCard/64/15277?claimKey=234b78b5d03a395f440b3b9acf784959a4f5f0a7f6c558ef6a2d22f8fee25a79", "https://klipwallet.com/?target=/claimCard/64/15279?claimKey=8fdaae3e92208aeb19753edff72abddacfd4d4f36fe871c77eb79f061537e415"]
+}
+```
+
+에스크로 생성에 성공하면 트랜잭션 해시값과 카드 지급 링크 그리고 `fail_count` 0을 받습니다.
+
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 전송에 실패했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 5-4. 에스크로 내역 조회 <a id="get-escrow"></a>
+
+에스크로 생성에 성공했다면 현재 에스크로 중인 카드 정보를 조회할 수 있습니다.
+
+```text
+curl -X GET "https://api.klipwallet.com/v2/escrow?contract_address=0x6E3571F451fc960Ea69b532006A2c8683fF8922F&cursor=" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+    "name":"파트너스 발행 카드",
+    "symbol_img":"https://...",
+    "cards":[{"created_at":1605921829,"updated_at":1606057801,"owner":"0x7998d102b2938532bc068300517d4db783f326c2","sender":"0xc95e3a887cb2108d4a19e2a9bcbe0827367372fe","card_id":15279,"card_uri":"https://klip-media.klaytn.com/card_asset/20295/7de0f5cc-6624-487f-adb9-4bfa86d38992.json","transaction_hash":"0x5082643fc9799badeea30d243e3c5aba46dfd0eedf623f6698c8f30c36618c6c"},{"created_at":1605921668,"updated_at":1606057801,"owner":"0x7998d102b2938532bc068300517d4db783f326c2","sender":"0xc95e3a887cb2108d4a19e2a9bcbe0827367372fe","card_id":15277,"card_uri":"https://klip-media.klaytn.com/card_asset/20295/e18133b8-aedc-4daf-aa2a-87654beabadf.json","transaction_hash":"0x5082643fc9799badeea30d243e3c5aba46dfd0eedf623f6698c8f30c36618c6c"}],
+    "next_cursor":""
+}
+```
+
+{% hint style="info" %}
+`cards` 배열의 상세 정보는 [Escrow Information](rest-api-card-minting.md#escrow-information)의 Response Detail 항목을 참조하십시오.
+{% endhint %}
+
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 전송에 실패했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 5-5. 에스크로 삭제 <a id="cancel-escrow"></a>
+
+현재 에스크로 중인 카드를 취소할 수 있습니다. 취소된 카드는 카드 보유 목록에서 다시 확인할 수 있습니다.
+
+```text
+curl -X DELETE "https://api.klipwallet.com/v2/escrow" \
+-d @./cancel_info.json \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+`cancel_info.json` 파일 예시는 아래와 같습니다.
+
+```text
+{
+    "pin": "91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203",
+    "contract_address": "0x6E3571F451fc960Ea69b532006A2c8683fF8922F"
+    "card_ids": [15277, 15279],
+}
+```
+
+이 파일에는 `pin`, `contract_address`는 카드를 발행한 스마트 컨트랙트 주소\([SCA](https://ko.docs.klaytn.com/klaytn/design/accounts#smart-contract-accounts-scas)\), 취소할 `card_id`의 배열인 `card_ids`가 들어갑니다.
+
+* `pin`은 핀 번호\(Klip Partners 회원 가입 시 입력하신 6자리 숫자 string 값\)를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+    "tx_hash":"0x831e207b0b951127646b8f7d7eded55903cecb29fe794e17a2d93f457b7158a4",
+    "fail_count":0,
+}
+```
+
+에스크로 생성에 성공하면 트랜잭션 해시값과 `fail_count` 0을 받습니다.
+
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 전송에 실패했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## 6. 트랜잭션 <a id="transaction"></a>
+### 6-1. 처리 결과 조회 <a id="get-receipt"></a>
+
+트랜잭션 처리 결과가 블록에 최종 성공으로 기록됐는지 여부를 조회할 수 있습니다. 트랜잭션 요청 후 곧바로 결과를 조회하는 경우 `4700: no transaction receipt` 에러가 발생할 수 있습니다. 대략 2초 이상의 딜레이를 두고 에러가 뜨지 않을 때까지 수회 반복 호출하는 것을 권장합니다.
+
+```text
+curl -X GET "https://api.klipwallet.com/v2/wallet/receipt?tx_hash=0x880a45d3c482c7d794c2e7b7dbdc9e933a68f4a1f3d978d582ba9f9ebd1f9e72" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+  "success": true
+}
+```
+
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="4700" %}
+```text
+"no transaction receipt": 트랜잭션 해시가 존재하지 않습니다. 아직 트랜잭션이 처리되지 않았거나 잘못된 트랜잭션 해시 값입니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+## 7. 계정과 카드 관리하기 <a id="account-management"></a>
+### 7-1. 계정 비밀번호와 핀 번호 변경하기 <a id="change-password-and-pin"></a>
+
+[Change Password](rest-api-card-minting.md#change-password)로 [Klip Partners](https://partners.klipwallet.com)에 `old_password`, `new_password`, 로그인 시 받은 `access_token`을 보내고 이전 비밀번호에서 새로운 비밀번호로 교체를 요청합니다.
+
+* `old_password`/`new_password`는 기존 비밀번호/새롭게 사용할 비밀번호를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * 기존 비밀번호/새롭게 사용할 비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자를 조합한 string 값입니다.  
+
+```text
+curl -X PUT "https://api.klipwallet.com/v2/partner/?opt=password" \
+-d '{"old_password":"HASHED_OLD_PASSWORD", "new_password":"HASHED_NEW_PASSWORD"}' \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{}
+```
+
+에러가 발생하지 않았다면 이전 비밀번호가 새 비밀번호로 교체된 것입니다.
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="4004" %}
+```text
+"invalid password": 비밀번호가 일치하지 않습니다.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+비밀번호 변경에 실패했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+[Change PIN](rest-api-card-minting.md#change-pin)으로 [Klip Partners](https://partners.klipwallet.com)에 이전 핀 번호, 새로운 핀 번호, 로그인 시 받은 `access_token`을 보내고 새로운 핀 번호로 핀 번호 교체를 요청합니다.
+
+* `old_pin`과 `new_pin`은 기존 핀 번호/새롭게 사용할 핀 번호를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `old_pin`과 `new_pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.  
+  * 기존 핀 번호/새롭게 사용할 핀 번호는 6자리 숫자 string 값입니다.  
+
+```text
+curl -X PUT "https://api.klipwallet.com/v2/partner/pin" \
+-d '{"old_pin":"HASHED_OLD_PIN_NUMBER", "new_pin":"HASHED_NEW_PIN_NUMBER"}' \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{}
+```
+
+에러가 발생하지 않았다면 이전 핀 번호가 새 핀 번호로 교체된 것입니다.
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="403" %}
+```text
+"exceed pin code error count": 핀 번호 입력 오류 횟수가 지정된 한도를 초과하였습니다.
+```
+{% endtab %}
+
+{% tab title="4006" %}
+```text
+"invalid pin code": 기존 핀 번호가 일치하지 않습니다.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+핀 번호를 변경하지 못했습니다.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 7-2. 이번 달 발행한 카드 개수 <a id="mint-count"></a>
+
+이번 달에 파트너 계정으로 발행한 총 카드 개수를 조회할 수 있습니다. 이 값은 매월 1일에 0으로 초기화됩니다.
+
+```text
+curl -X GET "https://api.klipwallet.com/v2/wallet/mint/count" \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+  "mint_count": 10
+}
+```
+
+`mint_count` 필드에 현재까지 발행한 카드 개수 값을 받습니다.
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
+
+### 7-3. 카드 삭제하기 <a id="delete-card"></a>
+
+[Delete Card](rest-api-card-minting.md#delete-card)로 [Klip Partners](https://partners.klipwallet.com)에 `delete_info.json` 파일, 로그인 시 받은 `access_token`을 보내고 발행한 카드 삭제를 요청합니다.
+
+```text
+curl -X DELETE "https://api.klipwallet.com/v2/wallet/nft" \
+-d @./delete_info.json \
+-H "Authorization: ACCESS_TOKEN" -H "Content-Type: application/json"
+```
+
+`delete_info.json` 파일 예시는 아래와 같습니다.
+
+```text
+//delete_info.json 파일 내용 예시
+{
+    pin: "91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203",
+    card_id: 12,
+    contract_address: "0xbad6444e1f84af055c22281d4ac7d75bde2ddec8"
+}
+```
+
+이 파일에는 삭제할 카드 ID, 카드를 발행한 [SCA](https://ko.docs.klaytn.com/klaytn/design/accounts#smart-contract-accounts-scas) 주소, 핀 번호가 담겨 있습니다.  
+
+* `pin`은 핀 번호\(Klip Partners 회원 가입 시 입력하신 6자리 숫자 string 값\)를 해시([SHA256](https://ko.wikipedia.org/wiki/SHA))한 64자리 string 값입니다.  
+  * `pin`은 트랜잭션 서명에 개인 키 대신 사용됩니다.  
+
+   
+요청이 정상 처리되면 아래 값을 받습니다.
+
+```text
+{
+    "hash": "0x2d26f602cfbb4c662931592bf2c4ee18d29f09683be5b9e8d589ff935fca0b97"
+}
+```
+
+에러가 발생하지 않았다면 카드가 정상 삭제된 것입니다. 카드가 정상 삭제되었다면 카드 삭제 트랜잭션 해시값을 받습니다.
+
+{% hint style="warning" %}
+발행한 카드만 삭제할 수 있으며, 다른 사람에게 보낸 카드는 삭제할 수 없습니다.  
+카드를 삭제해도 카드 이미지는 삭제되지 않습니다.
+{% endhint %}
+
+   
+요청이 정상 처리되지 않으면 아래 값을 받습니다.
+
+{% tabs %}
+{% tab title="400" %}
+```text
+"bad request": 잘못된 요청입니다. Request 파라미터를 다시 확인하십시오.
+```
+{% endtab %}
+
+{% tab title="기타" %}
+```text
+카드 삭제에 실패하였습니다. 삭제와 관련해 정확한 정보를 확인하려면 보유 카드를 조회하십시오.
+```
+{% endtab %}
+{% endtabs %}
+
+<br />
+이 문서 혹은 Klip에 관한 문의는 [개발자 포럼](https://klipforum.zendesk.com)을 방문해 도움을 받으십시오.
